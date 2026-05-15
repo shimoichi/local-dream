@@ -78,6 +78,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
@@ -386,6 +387,7 @@ fun ModelRunScreen(
 
     // Parameter share state
     var shareSourceParams by remember { mutableStateOf<GenerationParameters?>(null) }
+    var shareSourceModelId by remember { mutableStateOf<String?>(null) }
     var pendingImport by remember { mutableStateOf<ImportedParams?>(null) }
     var clipboardImportChecked by remember { mutableStateOf(false) }
     val shareUseBase64 by remember { generationPreferences.observeShareUseBase64() }
@@ -1533,6 +1535,31 @@ fun ModelRunScreen(
                                                 modifier = Modifier.weight(1f)
                                             )
                                             IconButton(onClick = {
+                                                val clipboard =
+                                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                                val raw = clipboard?.primaryClip
+                                                    ?.takeIf { it.itemCount > 0 }
+                                                    ?.getItemAt(0)
+                                                    ?.coerceToText(context)
+                                                    ?.toString()
+                                                val imported = ParamShare.tryDecode(raw)
+                                                if (imported != null) {
+                                                    pendingImport = imported
+                                                    clipboardImportChecked = true
+                                                } else {
+                                                    Toast.makeText(
+                                                        context,
+                                                        context.getString(R.string.import_no_params),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentPaste,
+                                                    contentDescription = stringResource(R.string.import_from_clipboard)
+                                                )
+                                            }
+                                            IconButton(onClick = {
                                                 val currentMode = when {
                                                     isInpaintMode -> GenerationMode.INPAINT
                                                     selectedImageUri != null -> GenerationMode.IMG2IMG
@@ -1553,6 +1580,7 @@ fun ModelRunScreen(
                                                     scheduler = scheduler,
                                                     mode = currentMode,
                                                 )
+                                                shareSourceModelId = modelId
                                             }) {
                                                 Icon(
                                                     imageVector = Icons.Default.Share,
@@ -2760,6 +2788,7 @@ fun ModelRunScreen(
                             )
                             IconButton(onClick = {
                                 shareSourceParams = generationParams
+                                shareSourceModelId = generationParamsModelId
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
@@ -3966,6 +3995,7 @@ fun ModelRunScreen(
                         )
                         IconButton(onClick = {
                             shareSourceParams = params
+                            shareSourceModelId = selectedHistoryItem?.modelId
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Share,
@@ -4502,7 +4532,7 @@ fun ModelRunScreen(
                 scope.launch { generationPreferences.setShareUseBase64(value) }
             },
             onConfirm = { selectedFields, useBase64 ->
-                val json = ParamShare.buildJson(source, selectedFields)
+                val json = ParamShare.buildJson(source, shareSourceModelId, selectedFields)
                 val payload = ParamShare.encodeForClipboard(json, useBase64)
                 val clipboard =
                     context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -4511,13 +4541,17 @@ fun ModelRunScreen(
                 )
                 clipboardImportChecked = true
                 shareSourceParams = null
+                shareSourceModelId = null
                 Toast.makeText(
                     context,
                     context.getString(R.string.share_copied),
                     Toast.LENGTH_SHORT
                 ).show()
             },
-            onDismiss = { shareSourceParams = null }
+            onDismiss = {
+                shareSourceParams = null
+                shareSourceModelId = null
+            }
         )
     }
 

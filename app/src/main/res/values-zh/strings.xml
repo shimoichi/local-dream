@@ -174,6 +174,8 @@
     <string name="import_clear_clipboard_hint">关闭对话框后（无论应用还是取消）从剪贴板中清除分享内容。</string>
     <string name="import_apply">应用</string>
     <string name="import_applied">参数已应用</string>
+    <string name="import_from_clipboard">从剪贴板导入</string>
+    <string name="import_no_params">剪贴板中未发现分享的参数</string>
 
     <!-- Error Messages -->
     <string name="error_download_failed">下载失败: %s</string>

@@ -47,10 +47,15 @@ object ParamShare {
     private const val IDENTITY_KEY = "_localdream_params"
     private const val SCHEMA_VERSION = 1
 
-    fun buildJson(params: GenerationParameters, fields: Set<ParamShareField>): String {
+    fun buildJson(
+        params: GenerationParameters,
+        modelId: String?,
+        fields: Set<ParamShareField>,
+    ): String {
         val json = JSONObject()
         json.put(IDENTITY_KEY, true)
         json.put("v", SCHEMA_VERSION)
+        if (!modelId.isNullOrBlank()) json.put("model_id", modelId)
         if (ParamShareField.PROMPT in fields) json.put("prompt", params.prompt)
         if (ParamShareField.NEGATIVE_PROMPT in fields) {
             json.put("negative_prompt", params.negativePrompt)

@@ -160,6 +160,8 @@
     <string name="import_clear_clipboard_hint">適用またはキャンセルでダイアログを閉じた後、クリップボードから共有内容を削除します。</string>
     <string name="import_apply">適用</string>
     <string name="import_applied">パラメータを適用しました</string>
+    <string name="import_from_clipboard">クリップボードからインポート</string>
+    <string name="import_no_params">クリップボードに共有パラメータが見つかりません</string>
     <string name="error_download_failed">ダウンロード失敗: %s</string>
     <string name="error_request_failed">リクエスト失敗: %s</string>
     <string name="unknown_error">不明なエラー</string>
