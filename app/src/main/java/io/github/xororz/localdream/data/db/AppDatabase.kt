@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
                         runOnCpu INTEGER NOT NULL,
                         useOpenCL INTEGER NOT NULL
                     )
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
                 db.execSQL(
                     """
@@ -57,28 +57,30 @@ abstract class AppDatabase : RoomDatabase() {
                            denoiseStrength, upscalerId, steps, cfg, seed, prompt,
                            negativePrompt, generationTime, scheduler, runOnCpu, useOpenCL
                     FROM generation_history
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
                 db.execSQL("DROP TABLE generation_history")
                 db.execSQL("ALTER TABLE generation_history_new RENAME TO generation_history")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_generation_history_modelId_timestamp ON generation_history (modelId, timestamp)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_generation_history_timestamp ON generation_history (timestamp)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_generation_history_modelId_timestamp ON generation_history (modelId, timestamp)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_generation_history_timestamp ON generation_history (timestamp)",
+                )
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_generation_history_mode ON generation_history (mode)")
             }
         }
 
-        fun get(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "local_dream.db",
-                )
-                    .addMigrations(MIGRATION_1_2)
-                    .fallbackToDestructiveMigration()
-                    .build()
-                    .also { INSTANCE = it }
-            }
+        fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
+            INSTANCE ?: Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "local_dream.db",
+            )
+                .addMigrations(MIGRATION_1_2)
+                .fallbackToDestructiveMigration(dropAllTables = true)
+                .build()
+                .also { INSTANCE = it }
         }
     }
 }

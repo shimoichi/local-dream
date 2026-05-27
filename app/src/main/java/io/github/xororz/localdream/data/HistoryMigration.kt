@@ -7,17 +7,17 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.room.withTransaction
 import io.github.xororz.localdream.data.db.AppDatabase
 import io.github.xororz.localdream.data.db.HistoryDao
 import io.github.xororz.localdream.data.db.HistoryEntity
-import androidx.room.withTransaction
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
 
 private val Context.migrationDataStore: DataStore<Preferences> by preferencesDataStore(name = "history_migration")
 private val MIGRATION_DONE_KEY = booleanPreferencesKey("history_migration_v1_done")
@@ -25,11 +25,7 @@ private val MIGRATION_DONE_KEY = booleanPreferencesKey("history_migration_v1_don
 sealed class MigrationState {
     data object Idle : MigrationState()
     data object NotNeeded : MigrationState()
-    data class InProgress(
-        val current: Int,
-        val total: Int,
-        val currentModelId: String?,
-    ) : MigrationState()
+    data class InProgress(val current: Int, val total: Int, val currentModelId: String?) : MigrationState()
 
     data object Done : MigrationState()
     data class Failed(val error: Throwable) : MigrationState()
@@ -38,11 +34,9 @@ sealed class MigrationState {
 object HistoryMigration {
     private const val TAG = "HistoryMigration"
 
-    suspend fun isDone(context: Context): Boolean {
-        return context.migrationDataStore.data
-            .map { it[MIGRATION_DONE_KEY] ?: false }
-            .first()
-    }
+    suspend fun isDone(context: Context): Boolean = context.migrationDataStore.data
+        .map { it[MIGRATION_DONE_KEY] ?: false }
+        .first()
 
     private suspend fun markDone(context: Context) {
         context.migrationDataStore.edit { it[MIGRATION_DONE_KEY] = true }
@@ -50,11 +44,7 @@ object HistoryMigration {
 
     suspend fun markDoneExternal(context: Context) = markDone(context)
 
-    suspend fun migrate(
-        context: Context,
-        db: AppDatabase,
-        progress: MutableStateFlow<MigrationState>,
-    ) = withContext(Dispatchers.IO) {
+    suspend fun migrate(context: Context, db: AppDatabase, progress: MutableStateFlow<MigrationState>) = withContext(Dispatchers.IO) {
         val historyRoot = File(context.filesDir, "history")
         if (!historyRoot.exists() || !historyRoot.isDirectory) {
             markDone(context)
@@ -85,7 +75,7 @@ object HistoryMigration {
         db.withTransaction {
             for ((modelId, jsonFile) in tasks) {
                 try {
-                    migrateOne(context, modelId, jsonFile, dao)
+                    migrateOne(modelId, jsonFile, dao)
                 } catch (e: Exception) {
                     Log.e(TAG, "skip ${jsonFile.absolutePath}", e)
                 }
@@ -108,12 +98,7 @@ object HistoryMigration {
         progress.value = MigrationState.Done
     }
 
-    private suspend fun migrateOne(
-        context: Context,
-        modelId: String,
-        jsonFile: File,
-        dao: HistoryDao,
-    ) {
+    private suspend fun migrateOne(modelId: String, jsonFile: File, dao: HistoryDao) {
         val timestamp = jsonFile.nameWithoutExtension.toLongOrNull() ?: return
         val historyDir = jsonFile.parentFile ?: return
 
@@ -140,12 +125,17 @@ object HistoryMigration {
             mode = GenerationMode.UNKNOWN.name,
             denoiseStrength = if (json.has("denoiseStrength")) {
                 runCatching { json.getDouble("denoiseStrength").toFloat() }.getOrNull()
-            } else null,
+            } else {
+                null
+            },
             upscalerId = if (isJpg) "unknown" else null,
             steps = json.optInt("steps", 20),
             cfg = runCatching { json.getDouble("cfg").toFloat() }.getOrDefault(7f),
-            seed = if (json.isNull("seed") || !json.has("seed")) null else
-                runCatching { json.getLong("seed") }.getOrNull(),
+            seed = if (json.isNull("seed") || !json.has("seed")) {
+                null
+            } else {
+                runCatching { json.getLong("seed") }.getOrNull()
+            },
             prompt = json.optString("prompt", ""),
             negativePrompt = json.optString("negativePrompt", ""),
             generationTime = json.optString("generationTime", "").ifBlank { null },
@@ -156,24 +146,28 @@ object HistoryMigration {
         dao.insert(entity)
     }
 
-    private fun parseSize(json: JSONObject): Pair<Int, Int> {
-        return try {
-            if (json.has("size")) {
-                when (val v = json.get("size")) {
-                    is String -> {
-                        val parts = v.split("x")
-                        if (parts.size == 2) parts[0].toInt() to parts[1].toInt()
-                        else 512 to 512
+    private fun parseSize(json: JSONObject): Pair<Int, Int> = try {
+        if (json.has("size")) {
+            when (val v = json.get("size")) {
+                is String -> {
+                    val parts = v.split("x")
+                    if (parts.size == 2) {
+                        parts[0].toInt() to parts[1].toInt()
+                    } else {
+                        512 to 512
                     }
-
-                    is Int -> v to v
-                    else -> 512 to 512
                 }
-            } else if (json.has("width") && json.has("height")) {
-                json.getInt("width") to json.getInt("height")
-            } else 512 to 512
-        } catch (_: Exception) {
+
+                is Int -> v to v
+
+                else -> 512 to 512
+            }
+        } else if (json.has("width") && json.has("height")) {
+            json.getInt("width") to json.getInt("height")
+        } else {
             512 to 512
         }
+    } catch (_: Exception) {
+        512 to 512
     }
 }

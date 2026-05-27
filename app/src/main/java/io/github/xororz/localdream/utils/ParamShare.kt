@@ -2,8 +2,8 @@ package io.github.xororz.localdream.utils
 
 import io.github.xororz.localdream.data.GenerationMode
 import io.github.xororz.localdream.ui.screens.GenerationParameters
-import org.json.JSONObject
 import java.util.Base64
+import org.json.JSONObject
 
 enum class ParamShareField {
     PROMPT,
@@ -47,11 +47,7 @@ object ParamShare {
     private const val IDENTITY_KEY = "_localdream_params"
     private const val SCHEMA_VERSION = 1
 
-    fun buildJson(
-        params: GenerationParameters,
-        modelId: String?,
-        fields: Set<ParamShareField>,
-    ): String {
+    fun buildJson(params: GenerationParameters, modelId: String?, fields: Set<ParamShareField>): String {
         val json = JSONObject()
         json.put(IDENTITY_KEY, true)
         json.put("v", SCHEMA_VERSION)
@@ -93,6 +89,7 @@ object ParamShare {
             }
 
             trimmed.startsWith("{") -> trimmed
+
             else -> return null
         }
         return runCatching {
@@ -100,8 +97,11 @@ object ParamShare {
             if (!json.optBoolean(IDENTITY_KEY, false)) return null
             ImportedParams(
                 prompt = if (json.has("prompt")) json.optString("prompt") else null,
-                negativePrompt = if (json.has("negative_prompt"))
-                    json.optString("negative_prompt") else null,
+                negativePrompt = if (json.has("negative_prompt")) {
+                    json.optString("negative_prompt")
+                } else {
+                    null
+                },
                 steps = if (json.has("steps")) json.optInt("steps") else null,
                 cfg = if (json.has("cfg")) json.optDouble("cfg").toFloat() else null,
                 seed = if (json.has("seed")) {
@@ -110,14 +110,26 @@ object ParamShare {
                         is String -> v.toLongOrNull()
                         else -> null
                     }
-                } else null,
-                scheduler = if (json.has("scheduler"))
-                    json.optString("scheduler") else null,
-                denoiseStrength = if (json.has("denoise_strength"))
-                    json.optDouble("denoise_strength").toFloat() else null,
-                mode = if (json.has("mode")) runCatching {
-                    GenerationMode.valueOf(json.optString("mode"))
-                }.getOrNull() else null,
+                } else {
+                    null
+                },
+                scheduler = if (json.has("scheduler")) {
+                    json.optString("scheduler")
+                } else {
+                    null
+                },
+                denoiseStrength = if (json.has("denoise_strength")) {
+                    json.optDouble("denoise_strength").toFloat()
+                } else {
+                    null
+                },
+                mode = if (json.has("mode")) {
+                    runCatching {
+                        GenerationMode.valueOf(json.optString("mode"))
+                    }.getOrNull()
+                } else {
+                    null
+                },
             )
         }.getOrNull()
     }

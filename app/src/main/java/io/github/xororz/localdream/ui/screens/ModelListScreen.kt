@@ -1,94 +1,115 @@
 package io.github.xororz.localdream.ui.screens
 
-import android.content.Context
-import android.content.Intent
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.runtime.*
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import android.content.ContentValues
+import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import io.github.xororz.localdream.data.*
-import io.github.xororz.localdream.navigation.Screen
-import io.github.xororz.localdream.service.ModelDownloadService
-import io.github.xororz.localdream.utils.LogCapture
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlinx.coroutines.launch
-import java.text.DecimalFormat
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.ui.text.style.TextDecoration
-import io.github.xororz.localdream.R
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.automirrored.filled.Help
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.ui.draw.clip
-import androidx.core.content.edit
-import java.io.File
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.documentfile.provider.DocumentFile
-import java.util.zip.ZipInputStream
-import java.io.BufferedOutputStream
+import androidx.compose.material3.*
+import androidx.compose.material3.AppBarRow
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.toShape
+import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.core.net.toUri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
+import androidx.documentfile.provider.DocumentFile
+import androidx.navigation.NavController
+import io.github.xororz.localdream.R
+import io.github.xororz.localdream.data.*
+import io.github.xororz.localdream.data.DarkModePreference
+import io.github.xororz.localdream.navigation.Screen
+import io.github.xororz.localdream.service.ModelDownloadService
+import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
+import io.github.xororz.localdream.ui.components.SmoothCircularWavyProgressIndicator
+import io.github.xororz.localdream.ui.components.SmoothLinearWavyProgressIndicator
+import io.github.xororz.localdream.ui.theme.LocalThemeController
+import io.github.xororz.localdream.ui.theme.Motion
+import io.github.xororz.localdream.ui.theme.ThemePreset
+import io.github.xororz.localdream.ui.theme.scheme
+import io.github.xororz.localdream.utils.LogCapture
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
+import java.util.zip.ZipInputStream
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-data class LoRAFile(
-    val uri: Uri,
-    val weight: Float = 1.0f
-)
+data class LoRAFile(val uri: Uri, val weight: Float = 1.0f)
 
 private fun getCleanFileName(uri: Uri): String {
     val fileName = uri.lastPathSegment ?: "Unknown file"
@@ -100,11 +121,7 @@ private fun getCleanFileName(uri: Uri): String {
 }
 
 @Composable
-private fun DeleteConfirmDialog(
-    selectedCount: Int,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
+private fun DeleteConfirmDialog(selectedCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.delete_model)) },
@@ -113,8 +130,8 @@ private fun DeleteConfirmDialog(
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                )
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
             ) {
                 Text(stringResource(R.string.delete))
             }
@@ -123,18 +140,36 @@ private fun DeleteConfirmDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalFoundationApi::class,
+)
 @Composable
-fun ModelListScreen(
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
+fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
+
+    // String resources hoisted to composable scope (lint: LocalContextGetResourceValueCall).
+    val msgDownloadDone = stringResource(R.string.download_done)
+    val msgFileDeleted = stringResource(R.string.file_deleted)
+    val msgEmbeddingDeleted = stringResource(R.string.embedding_deleted)
+    val msgEmbeddingImported = stringResource(R.string.embedding_imported)
+    val msgLogSaved = stringResource(R.string.log_saved)
+    val msgLogSaveFailed = stringResource(R.string.log_save_failed)
+    val msgModelConversionSuccess = stringResource(R.string.model_conversion_success)
+    val msgModelConversionFailed = stringResource(R.string.model_conversion_failed)
+    val msgNpuModelAddedSuccess = stringResource(R.string.npu_model_added_success)
+    val msgNpuModelAddFailed = stringResource(R.string.npu_model_add_failed)
+    val msgDeleteSuccess = stringResource(R.string.delete_success)
+    val msgDeleteFailed = stringResource(R.string.delete_failed)
+    val msgUnsupportNpu = stringResource(R.string.unsupport_npu)
+    val msgTagImportFailed = stringResource(R.string.tag_import_failed)
 
     var downloadingModel by remember { mutableStateOf<Model?>(null) }
     var currentProgress by remember { mutableStateOf<DownloadProgress?>(null) }
@@ -157,12 +192,13 @@ fun ModelListScreen(
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
     var conversionProgress by remember { mutableStateOf("") }
+    var extractByteProgress by remember { mutableStateOf<ExtractByteProgress?>(null) }
     var tempBaseUrl by remember { mutableStateOf("") }
     var selectedSource by remember { mutableStateOf("huggingface") }
     val generationPreferences = remember { GenerationPreferences(context) }
     var currentBaseUrl by remember { mutableStateOf("https://huggingface.co/") }
 
-    var version by remember { mutableStateOf(0) }
+    var version by remember { mutableIntStateOf(0) }
     val modelRepository = remember(version) { ModelRepository(context) }
 
     var showHelpDialog by remember { mutableStateOf(false) }
@@ -171,7 +207,7 @@ fun ModelListScreen(
         val preferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val isFirst = preferences.getBoolean("is_first_launch", true)
         if (isFirst) {
-            preferences.edit() { putBoolean("is_first_launch", false) }
+            preferences.edit { putBoolean("is_first_launch", false) }
         }
         isFirst
     }
@@ -187,7 +223,7 @@ fun ModelListScreen(
                     currentProgress = DownloadProgress(
                         progress = state.progress,
                         downloadedBytes = state.downloadedBytes,
-                        totalBytes = state.totalBytes
+                        totalBytes = state.totalBytes,
                     )
                 }
             }
@@ -204,7 +240,7 @@ fun ModelListScreen(
                 modelRepository.refreshModelState(state.modelId)
                 downloadingModel = null
                 currentProgress = null
-                snackbarHostState.showSnackbar(context.getString(R.string.download_done))
+                snackbarHostState.showSnackbar(msgDownloadDone)
             }
 
             is ModelDownloadService.DownloadState.Error -> {
@@ -246,26 +282,23 @@ fun ModelListScreen(
 
     val pagerState = rememberPagerState(
         initialPage = lastViewedPage,
-        pageCount = { 2 }
+        pageCount = { 2 },
     )
 
     LaunchedEffect(pagerState.currentPage) {
         val preferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        preferences.edit() { putInt("last_viewed_page", pagerState.currentPage) }
+        preferences.edit { putInt("last_viewed_page", pagerState.currentPage) }
     }
 
     val tabTitles = listOf(
         stringResource(R.string.cpu_models),
-        stringResource(R.string.npu_models)
+        stringResource(R.string.npu_models),
     )
 
-    BackHandler(enabled = isSelectionMode || showSettingsDialog) {
-        when {
-            showSettingsDialog -> showSettingsDialog = false
-            isSelectionMode -> {
-                isSelectionMode = false
-                selectedModels = emptySet()
-            }
+    if (isSelectionMode) {
+        BackHandler {
+            isSelectionMode = false
+            selectedModels = emptySet()
         }
     }
     LaunchedEffect(downloadError) {
@@ -273,7 +306,7 @@ fun ModelListScreen(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = it,
-                    duration = SnackbarDuration.Short
+                    duration = SnackbarDuration.Short,
                 )
                 downloadError = null
             }
@@ -281,64 +314,46 @@ fun ModelListScreen(
     }
     if (showHelpDialog) {
         AlertDialog(
-//            onDismissRequest = { showHelpDialog = false },
             onDismissRequest = { },
-            title = {
-                Text(
-                    text = stringResource(R.string.about_app),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            },
+            title = { Text(stringResource(R.string.about_app)) },
             text = {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 8.dp),
                 ) {
-                    val context = LocalContext.current
                     val mustReadText = stringResource(R.string.must_read)
                     val githubUrl = "https://github.com/xororz/local-dream"
+                    val linkColor = MaterialTheme.colorScheme.primary
 
                     val annotatedString = buildAnnotatedString {
-                        val fullText = mustReadText
-                        append(fullText)
-
-                        val startIndex = fullText.indexOf(githubUrl)
+                        val startIndex = mustReadText.indexOf(githubUrl)
                         if (startIndex >= 0) {
-                            addStyle(
-                                style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    textDecoration = TextDecoration.Underline
+                            append(mustReadText.substring(0, startIndex))
+                            withLink(
+                                LinkAnnotation.Url(
+                                    url = githubUrl,
+                                    styles = TextLinkStyles(
+                                        style = SpanStyle(
+                                            color = linkColor,
+                                            textDecoration = TextDecoration.Underline,
+                                        ),
+                                    ),
                                 ),
-                                start = startIndex,
-                                end = startIndex + githubUrl.length
-                            )
-                            addStringAnnotation(
-                                tag = "URL",
-                                annotation = githubUrl,
-                                start = startIndex,
-                                end = startIndex + githubUrl.length
-                            )
+                            ) {
+                                append(githubUrl)
+                            }
+                            append(mustReadText.substring(startIndex + githubUrl.length))
+                        } else {
+                            append(mustReadText)
                         }
                     }
 
-                    ClickableText(
+                    Text(
                         text = annotatedString,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(bottom = 12.dp),
-                        onClick = { offset ->
-                            annotatedString.getStringAnnotations(
-                                tag = "URL",
-                                start = offset,
-                                end = offset
-                            ).firstOrNull()?.let { annotation ->
-                                val intent = Intent(Intent.ACTION_VIEW, annotation.item.toUri())
-                                context.startActivity(intent)
-                            }
-                        }
                     )
                 }
             },
@@ -346,7 +361,7 @@ fun ModelListScreen(
                 TextButton(onClick = { showHelpDialog = false }) {
                     Text(stringResource(R.string.got_it))
                 }
-            }
+            },
         )
     }
 
@@ -363,9 +378,9 @@ fun ModelListScreen(
             onFileDeleted = {
                 modelRepository.refreshAllModels()
                 scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.file_deleted))
+                    snackbarHostState.showSnackbar(msgFileDeleted)
                 }
-            }
+            },
         )
     }
 
@@ -375,14 +390,14 @@ fun ModelListScreen(
             onDismiss = { showEmbeddingManagerDialog = false },
             onEmbeddingDeleted = {
                 scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.embedding_deleted))
+                    snackbarHostState.showSnackbar(msgEmbeddingDeleted)
                 }
             },
             onEmbeddingImported = {
                 scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.embedding_imported))
+                    snackbarHostState.showSnackbar(msgEmbeddingImported)
                 }
-            }
+            },
         )
     }
 
@@ -401,16 +416,16 @@ fun ModelListScreen(
                             .heightIn(max = 400.dp)
                             .background(
                                 MaterialTheme.colorScheme.surfaceContainerHighest,
-                                RoundedCornerShape(8.dp)
+                                MaterialTheme.shapes.extraSmall,
                             )
-                            .padding(8.dp)
+                            .padding(8.dp),
                     ) {
                         Text(
                             text = capturedLogs,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
+                                .verticalScroll(rememberScrollState()),
                         )
                     }
                 }
@@ -428,13 +443,13 @@ fun ModelListScreen(
                                     put(MediaStore.Downloads.MIME_TYPE, "text/plain")
                                     put(
                                         MediaStore.Downloads.RELATIVE_PATH,
-                                        Environment.DIRECTORY_DOWNLOADS + "/LocalDream"
+                                        Environment.DIRECTORY_DOWNLOADS + "/LocalDream",
                                     )
                                 }
                                 val resolver = context.contentResolver
                                 val uri = resolver.insert(
                                     MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                                    values
+                                    values,
                                 ) ?: throw java.io.IOException("MediaStore insert failed")
                                 resolver.openOutputStream(uri)?.use { out ->
                                     out.write(capturedLogs.toByteArray(Charsets.UTF_8))
@@ -443,9 +458,9 @@ fun ModelListScreen(
                             } else {
                                 val dir = File(
                                     Environment.getExternalStoragePublicDirectory(
-                                        Environment.DIRECTORY_DOWNLOADS
+                                        Environment.DIRECTORY_DOWNLOADS,
                                     ),
-                                    "LocalDream"
+                                    "LocalDream",
                                 )
                                 if (!dir.exists()) dir.mkdirs()
                                 val file = File(dir, filename)
@@ -460,9 +475,9 @@ fun ModelListScreen(
                         }
                         withContext(Dispatchers.Main) {
                             val msg = if (savedPath != null) {
-                                context.getString(R.string.log_saved, savedPath)
+                                msgLogSaved.format(savedPath)
                             } else {
-                                context.getString(R.string.log_save_failed)
+                                msgLogSaveFailed
                             }
                             snackbarHostState.showSnackbar(msg)
                             LogCapture.consume()
@@ -476,7 +491,7 @@ fun ModelListScreen(
                 TextButton(onClick = { LogCapture.consume() }) {
                     Text(stringResource(R.string.close))
                 }
-            }
+            },
         )
     }
 
@@ -503,23 +518,20 @@ fun ModelListScreen(
                             isConverting = false
                             modelRepository.refreshAllModels()
                             scope.launch {
-                                snackbarHostState.showSnackbar(context.getString(R.string.model_conversion_success))
+                                snackbarHostState.showSnackbar(msgModelConversionSuccess)
                             }
                         },
                         onError = { error ->
                             isConverting = false
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    context.getString(
-                                        R.string.model_conversion_failed,
-                                        error
-                                    )
+                                    msgModelConversionFailed.format(error),
                                 )
                             }
-                        }
+                        },
                     )
                 }
-            }
+            },
         )
     }
 
@@ -537,30 +549,33 @@ fun ModelListScreen(
                         onProgress = { progress ->
                             conversionProgress = progress
                         },
+                        onByteProgress = { extracted, total, fraction ->
+                            extractByteProgress = ExtractByteProgress(extracted, total, fraction)
+                        },
                         onStart = {
+                            extractByteProgress = null
                             isConverting = true
                         },
                         onSuccess = {
                             isConverting = false
+                            extractByteProgress = null
                             modelRepository.refreshAllModels()
                             scope.launch {
-                                snackbarHostState.showSnackbar(context.getString(R.string.npu_model_added_success))
+                                snackbarHostState.showSnackbar(msgNpuModelAddedSuccess)
                             }
                         },
                         onError = { error ->
                             isConverting = false
+                            extractByteProgress = null
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    context.getString(
-                                        R.string.npu_model_add_failed,
-                                        error
-                                    )
+                                    msgNpuModelAddFailed.format(error),
                                 )
                             }
-                        }
+                        },
                     )
                 }
-            }
+            },
         )
     }
 
@@ -582,8 +597,11 @@ fun ModelListScreen(
                     modelRepository.refreshAllModels()
 
                     snackbarHostState.showSnackbar(
-                        if (successCount == selectedModels.size) context.getString(R.string.delete_success)
-                        else context.getString(R.string.delete_failed)
+                        if (successCount == selectedModels.size) {
+                            msgDeleteSuccess
+                        } else {
+                            msgDeleteFailed
+                        },
                     )
 
                     selectedModels = emptySet()
@@ -591,7 +609,7 @@ fun ModelListScreen(
             },
             onDismiss = {
                 showDeleteConfirm = false
-            }
+            },
         )
     }
 
@@ -605,7 +623,7 @@ fun ModelListScreen(
                     TextButton(onClick = { showDownloadConfirm = null }) {
                         Text(stringResource(R.string.confirm))
                     }
-                }
+                },
             )
         } else {
             AlertDialog(
@@ -621,7 +639,7 @@ fun ModelListScreen(
                             downloadingModel = model
                             currentProgress = null
                             model.startDownload(context)
-                        }
+                        },
                     ) {
                         Text(stringResource(R.string.confirm))
                     }
@@ -630,7 +648,7 @@ fun ModelListScreen(
                     TextButton(onClick = { showDownloadConfirm = null }) {
                         Text(stringResource(R.string.cancel))
                     }
-                }
+                },
             )
         }
     }
@@ -649,7 +667,7 @@ fun ModelListScreen(
                         downloadingModel = model
                         currentProgress = null
                         model.startDownload(context)
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -658,7 +676,7 @@ fun ModelListScreen(
                 TextButton(onClick = { showUpgradeConfirm = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -667,14 +685,25 @@ fun ModelListScreen(
             LargeTopAppBar(
                 title = {
                     Column {
-                        Text("Local Dream✨")
                         Text(
-                            if (isSelectionMode) stringResource(
-                                R.string.selected_items,
-                                selectedModels.size
-                            ) else stringResource(R.string.available_models),
+                            text = "Local Dream✨",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = if (isSelectionMode) {
+                                pluralStringResource(
+                                    R.plurals.selected_items,
+                                    selectedModels.size,
+                                    selectedModels.size,
+                                )
+                            } else {
+                                stringResource(R.string.available_models)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 },
@@ -689,43 +718,57 @@ fun ModelListScreen(
                     }
                 },
                 actions = {
-                    if (isSelectionMode && selectedModels.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Default.Delete, stringResource(R.string.delete))
+                    if (isSelectionMode) {
+                        if (selectedModels.isNotEmpty()) {
+                            IconButton(onClick = { showDeleteConfirm = true }) {
+                                Icon(Icons.Default.Delete, stringResource(R.string.delete))
+                            }
                         }
-                    }
-                    IconButton(onClick = { showHelpDialog = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help))
-                    }
-                    if (Model.isQualcommDevice()) {
-                        IconButton(onClick = { navController.navigate(Screen.Upscale.route) }) {
-                            Icon(Icons.Default.AutoFixHigh, stringResource(R.string.image_upscale))
+                    } else {
+                        val helpLabel = stringResource(R.string.help)
+                        val upscaleLabel = stringResource(R.string.image_upscale)
+                        val settingsLabel = stringResource(R.string.settings)
+                        AppBarRow {
+                            clickableItem(
+                                onClick = { showHelpDialog = true },
+                                icon = {
+                                    Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null)
+                                },
+                                label = helpLabel,
+                            )
+                            if (Model.isQualcommDevice()) {
+                                clickableItem(
+                                    onClick = { navController.navigate(Screen.Upscale.route) },
+                                    icon = {
+                                        Icon(Icons.Default.AutoFixHigh, contentDescription = null)
+                                    },
+                                    label = upscaleLabel,
+                                )
+                            }
+                            clickableItem(
+                                onClick = { showSettingsDialog = true },
+                                icon = {
+                                    Icon(Icons.Default.Settings, contentDescription = null)
+                                },
+                                label = settingsLabel,
+                            )
                         }
-                    }
-                    IconButton(onClick = { showSettingsDialog = true }) {
-                        Icon(Icons.Default.Settings, stringResource(R.string.settings))
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
-            TabRow(
+            PrimaryTabRow(
                 selectedTabIndex = pagerState.currentPage,
-                indicator = { tabPositions ->
-                    SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
@@ -738,35 +781,29 @@ fun ModelListScreen(
                         text = {
                             Text(
                                 text = title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
+                                style = MaterialTheme.typography.titleSmall,
                             )
-                        }
+                        },
                     )
                 }
             }
 
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) { page ->
                 val models = if (page == 0) cpuModels else npuModels
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = 8.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (page == 0) {
                         item {
                             AddCustomModelButton(
                                 onClick = { showCustomModelDialog = true },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
@@ -775,31 +812,28 @@ fun ModelListScreen(
                         item {
                             AddCustomNpuModelButton(
                                 onClick = { showCustomNpuModelDialog = true },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
 
                     items(
                         items = models,
-                        key = { model -> "${model.id}_${version}" }
+                        key = { model -> "${model.id}_$version" },
                     ) { model ->
                         ModelCard(
                             model = model,
                             modifier = Modifier.animateItem(
-                                fadeInSpec = tween(durationMillis = 300),
-                                fadeOutSpec = tween(durationMillis = 300),
-                                placementSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
+                                fadeInSpec = tween(Motion.DurationMedium),
+                                fadeOutSpec = tween(Motion.DurationMedium),
+                                placementSpec = Motion.springExpressiveSpatial(),
                             ),
                             isSelected = selectedModels.contains(model),
                             isSelectionMode = isSelectionMode,
                             onClick = {
                                 if (!Model.isDeviceSupported() && !model.runOnCpu) {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(context.getString(R.string.unsupport_npu))
+                                        snackbarHostState.showSnackbar(msgUnsupportNpu)
                                     }
                                     return@ModelCard
                                 }
@@ -831,7 +865,7 @@ fun ModelListScreen(
                             },
                             onUpdateClick = {
                                 showUpgradeConfirm = model
-                            }
+                            },
                         )
                     }
 
@@ -841,29 +875,30 @@ fun ModelListScreen(
                             LaunchedEffect(Unit) { visible = true }
                             AnimatedVisibility(
                                 visible = visible,
-                                enter = fadeIn(animationSpec = tween(500)) + expandVertically()
+                                enter = fadeIn(animationSpec = Motion.Fade) + expandVertically(),
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 32.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.SearchOff,
                                         contentDescription = null,
                                         modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
-                                        text = if (page == 0)
+                                        text = if (page == 0) {
                                             stringResource(R.string.no_cpu_models)
-                                        else
-                                            stringResource(R.string.no_npu_models),
+                                        } else {
+                                            stringResource(R.string.no_npu_models)
+                                        },
                                         style = MaterialTheme.typography.bodyLarge,
                                         textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -874,43 +909,66 @@ fun ModelListScreen(
 
             Row(
                 modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.Center,
             ) {
                 TabPageIndicator(
                     pageCount = 2,
                     currentPage = pagerState.currentPage,
-                    modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
         }
     }
 
-    AnimatedVisibility(
-        visible = showSettingsDialog,
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut()
-    ) {
+    // Settings overlay with predictive back support.
+    // drawerOffset: 0f = fully open, 1f = fully off-screen to the right.
+    val drawerOffset = remember { Animatable(1f) }
+    val drawerAnimSpec = tween<Float>(Motion.DurationLong, easing = Motion.Emphasized)
+    LaunchedEffect(showSettingsDialog) {
+        drawerOffset.animateTo(
+            targetValue = if (showSettingsDialog) 0f else 1f,
+            animationSpec = drawerAnimSpec,
+        )
+    }
+    if (showSettingsDialog) {
+        PredictiveBackHandler { progressFlow ->
+            try {
+                progressFlow.collect { event ->
+                    drawerOffset.snapTo(event.progress)
+                }
+                // Committed: close the drawer; LaunchedEffect finishes the animation.
+                showSettingsDialog = false
+            } catch (_: CancellationException) {
+                // Cancelled: slide back to open.
+                drawerOffset.animateTo(0f, animationSpec = drawerAnimSpec)
+            }
+        }
+    }
+    if (drawerOffset.value < 1f) {
+        val settingsScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .graphicsLayer { translationX = size.width * drawerOffset.value }
+                .background(MaterialTheme.colorScheme.surface),
         ) {
             Scaffold(
+                modifier = Modifier.nestedScroll(settingsScrollBehavior.nestedScrollConnection),
                 topBar = {
                     TopAppBar(
                         title = { Text(stringResource(R.string.settings)) },
                         navigationIcon = {
                             IconButton(onClick = { showSettingsDialog = false }) {
-                                Icon(Icons.Default.ArrowBack, stringResource(R.string.back))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    stringResource(R.string.back),
+                                )
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
+                        scrollBehavior = settingsScrollBehavior,
                     )
-                }
+                },
             ) { paddingValues ->
                 LazyColumn(
                     modifier = Modifier
@@ -918,7 +976,7 @@ fun ModelListScreen(
                         .padding(paddingValues)
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    contentPadding = PaddingValues(vertical = 16.dp),
                 ) {
                     // Download source settings section
                     item {
@@ -926,25 +984,24 @@ fun ModelListScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CloudDownload,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(20.dp),
                                 )
                                 Text(
                                     stringResource(R.string.download_source),
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
                                 )
                             }
                             Text(
                                 stringResource(R.string.download_settings_hint),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp),
                             )
 
                             var expanded by remember { mutableStateOf(false) }
@@ -952,7 +1009,7 @@ fun ModelListScreen(
 
                             ExposedDropdownMenuBox(
                                 expanded = expanded,
-                                onExpandedChange = { expanded = !expanded }
+                                onExpandedChange = { expanded = !expanded },
                             ) {
                                 OutlinedTextField(
                                     value = when (selectedSource) {
@@ -967,14 +1024,17 @@ fun ModelListScreen(
                                     readOnly = selectedSource != "custom",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .menuAnchor()
+                                        .menuAnchor(
+                                            ExposedDropdownMenuAnchorType.PrimaryEditable,
+                                            enabled = true,
+                                        )
                                         .focusRequester(focusRequester)
                                         .onFocusChanged { focusState ->
                                             if (!focusState.isFocused && selectedSource == "custom") {
                                                 scope.launch {
                                                     if (tempBaseUrl.isNotEmpty() && tempBaseUrl != currentBaseUrl) {
                                                         generationPreferences.saveBaseUrl(
-                                                            tempBaseUrl
+                                                            tempBaseUrl,
                                                         )
                                                         currentBaseUrl = tempBaseUrl
                                                         version += 1
@@ -985,13 +1045,12 @@ fun ModelListScreen(
                                     trailingIcon = {
                                         IconButton(onClick = {}) {
                                             ExposedDropdownMenuDefaults.TrailingIcon(
-                                                expanded = expanded
+                                                expanded = expanded,
                                             )
                                         }
                                     },
-                                    singleLine = true
+                                    singleLine = true,
                                 )
-
 
                                 LaunchedEffect(selectedSource) {
                                     if (selectedSource == "custom") {
@@ -1000,7 +1059,7 @@ fun ModelListScreen(
                                 }
                                 ExposedDropdownMenu(
                                     expanded = expanded,
-                                    onDismissRequest = { expanded = false }
+                                    onDismissRequest = { expanded = false },
                                 ) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.source_huggingface)) },
@@ -1017,7 +1076,7 @@ fun ModelListScreen(
                                                     version += 1
                                                 }
                                             }
-                                        }
+                                        },
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.source_hf_mirror)) },
@@ -1034,7 +1093,7 @@ fun ModelListScreen(
                                                     version += 1
                                                 }
                                             }
-                                        }
+                                        },
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.source_custom)) },
@@ -1045,42 +1104,43 @@ fun ModelListScreen(
                                             scope.launch {
                                                 generationPreferences.saveSelectedSource("custom")
                                             }
-                                        }
+                                        },
                                     )
                                 }
                             }
                         }
                     }
+                    // Appearance (theme) section
+                    item { AppearanceSection() }
                     // Feature settings section
                     item {
                         Column {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(20.dp),
                                 )
                                 Text(
                                     stringResource(R.string.feature_settings),
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
                                 )
                             }
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                )
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ),
                             ) {
                                 val preferences = LocalContext.current.getSharedPreferences(
                                     "app_prefs",
-                                    Context.MODE_PRIVATE
+                                    Context.MODE_PRIVATE,
                                 )
                                 var useImg2img by remember {
                                     mutableStateOf(
@@ -1089,20 +1149,26 @@ fun ModelListScreen(
                                                 preferences.edit {
                                                     putBoolean(
                                                         "use_img2img",
-                                                        true
+                                                        true,
                                                     )
                                                 }
                                             }
-                                        })
+                                        },
+                                    )
                                 }
                                 var showProcess by remember {
                                     mutableStateOf(
-                                        preferences.getBoolean("show_diffusion_process", false)
+                                        preferences.getBoolean("show_diffusion_process", false),
                                     )
                                 }
                                 var captureLogs by remember {
                                     mutableStateOf(
-                                        preferences.getBoolean("enable_log_capture", false)
+                                        preferences.getBoolean("enable_log_capture", false),
+                                    )
+                                }
+                                var listenOnAllAddresses by remember {
+                                    mutableStateOf(
+                                        preferences.getBoolean("listen_on_all_addresses", false),
                                     )
                                 }
                                 var enableTagAutocomplete by remember {
@@ -1114,7 +1180,7 @@ fun ModelListScreen(
                                                         putBoolean("enable_tag_autocomplete", true)
                                                     }
                                                 }
-                                            }
+                                            },
                                     )
                                 }
                                 val tagRepository =
@@ -1122,7 +1188,7 @@ fun ModelListScreen(
                                 val tagDictState by tagRepository.state.collectAsState()
                                 var tagImportInProgress by remember { mutableStateOf(false) }
                                 val mainCsvPickerLauncher = rememberLauncherForActivityResult(
-                                    contract = ActivityResultContracts.GetContent()
+                                    contract = ActivityResultContracts.GetContent(),
                                 ) { uri ->
                                     if (uri == null) return@rememberLauncherForActivityResult
                                     val displayName = getFileNameFromUri(context, uri)
@@ -1131,18 +1197,21 @@ fun ModelListScreen(
                                         val result = tagRepository.importMainCsv(uri, displayName)
                                         tagImportInProgress = false
                                         val message = when (result) {
-                                            is ImportResult.Success -> context.getString(
-                                                R.string.tag_import_success, result.lineCount
-                                            )
+                                            is ImportResult.Success ->
+                                                resources.getQuantityString(
+                                                    R.plurals.tag_import_success,
+                                                    result.lineCount,
+                                                    result.lineCount,
+                                                )
 
-                                            is ImportResult.Error -> context.getString(R.string.tag_import_failed)
+                                            is ImportResult.Error -> msgTagImportFailed
                                         }
                                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                                 val translationCsvPickerLauncher =
                                     rememberLauncherForActivityResult(
-                                        contract = ActivityResultContracts.GetContent()
+                                        contract = ActivityResultContracts.GetContent(),
                                     ) { uri ->
                                         if (uri == null) return@rememberLauncherForActivityResult
                                         val displayName = getFileNameFromUri(context, uri)
@@ -1152,11 +1221,14 @@ fun ModelListScreen(
                                                 tagRepository.importTranslationCsv(uri, displayName)
                                             tagImportInProgress = false
                                             val message = when (result) {
-                                                is ImportResult.Success -> context.getString(
-                                                    R.string.tag_import_success, result.lineCount
-                                                )
+                                                is ImportResult.Success ->
+                                                    resources.getQuantityString(
+                                                        R.plurals.tag_import_success,
+                                                        result.lineCount,
+                                                        result.lineCount,
+                                                    )
 
-                                                is ImportResult.Error -> context.getString(R.string.tag_import_failed)
+                                                is ImportResult.Error -> msgTagImportFailed
                                             }
                                             Toast.makeText(context, message, Toast.LENGTH_SHORT)
                                                 .show()
@@ -1170,109 +1242,61 @@ fun ModelListScreen(
                                                     putBoolean("sdxl_lowram", true)
                                                 }
                                             }
-                                        }
+                                        },
                                     )
                                 }
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = "img2img",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            stringResource(R.string.img2img_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Switch(
-                                        checked = useImg2img,
-                                        onCheckedChange = {
-                                            useImg2img = it
-                                            preferences.edit {
-                                                putBoolean("use_img2img", it)
-                                            }
-                                        }
-                                    )
-                                }
+                                SwitchSettingRow(
+                                    title = "img2img",
+                                    description = stringResource(R.string.img2img_hint),
+                                    checked = useImg2img,
+                                    onCheckedChange = {
+                                        useImg2img = it
+                                        preferences.edit { putBoolean("use_img2img", it) }
+                                    },
+                                )
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.show_process),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            stringResource(R.string.show_process_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Switch(
-                                        checked = showProcess,
-                                        onCheckedChange = {
-                                            showProcess = it
-                                            preferences.edit {
-                                                putBoolean("show_diffusion_process", it)
-                                            }
+                                SwitchSettingRow(
+                                    title = stringResource(R.string.show_process),
+                                    description = stringResource(R.string.show_process_hint),
+                                    checked = showProcess,
+                                    onCheckedChange = {
+                                        showProcess = it
+                                        preferences.edit {
+                                            putBoolean("show_diffusion_process", it)
                                         }
-                                    )
-                                }
+                                    },
+                                )
                                 AnimatedVisibility(visible = showProcess) {
                                     Column {
                                         HorizontalDivider(
                                             modifier = Modifier.padding(horizontal = 16.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.2f
-                                            )
                                         )
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(16.dp),
                                         ) {
                                             var stride by remember {
-                                                mutableStateOf(
+                                                mutableFloatStateOf(
                                                     preferences.getInt("show_diffusion_stride", 1)
-                                                        .toFloat()
+                                                        .toFloat(),
                                                 )
                                             }
                                             Text(
                                                 text = stringResource(R.string.preview_stride),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
+                                                style = MaterialTheme.typography.titleSmall,
                                             )
                                             Text(
-                                                stringResource(
-                                                    R.string.preview_stride_hint,
-                                                    stride.toInt()
+                                                pluralStringResource(
+                                                    R.plurals.preview_stride_hint,
+                                                    stride.toInt(),
+                                                    stride.toInt(),
                                                 ),
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.7f
-                                                )
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             Slider(
                                                 value = stride,
@@ -1284,136 +1308,90 @@ fun ModelListScreen(
                                                 },
                                                 valueRange = 1f..10f,
                                                 steps = 8,
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
                                     }
                                 }
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.capture_logs),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            stringResource(R.string.capture_logs_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Switch(
-                                        checked = captureLogs,
-                                        onCheckedChange = {
-                                            captureLogs = it
-                                            preferences.edit {
-                                                putBoolean("enable_log_capture", it)
-                                            }
+                                SwitchSettingRow(
+                                    title = stringResource(R.string.capture_logs),
+                                    description = stringResource(R.string.capture_logs_hint),
+                                    checked = captureLogs,
+                                    onCheckedChange = {
+                                        captureLogs = it
+                                        preferences.edit {
+                                            putBoolean("enable_log_capture", it)
                                         }
-                                    )
-                                }
+                                    },
+                                )
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.tag_autocomplete),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            stringResource(R.string.tag_autocomplete_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Switch(
-                                        checked = enableTagAutocomplete,
-                                        onCheckedChange = {
-                                            enableTagAutocomplete = it
-                                            preferences.edit {
-                                                putBoolean("enable_tag_autocomplete", it)
-                                            }
+                                SwitchSettingRow(
+                                    title = stringResource(R.string.tag_autocomplete),
+                                    description = stringResource(R.string.tag_autocomplete_hint),
+                                    checked = enableTagAutocomplete,
+                                    onCheckedChange = {
+                                        enableTagAutocomplete = it
+                                        preferences.edit {
+                                            putBoolean("enable_tag_autocomplete", it)
                                         }
-                                    )
-                                }
+                                    },
+                                )
                                 AnimatedVisibility(visible = enableTagAutocomplete) {
                                     Column {
                                         HorizontalDivider(
                                             modifier = Modifier.padding(horizontal = 16.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.2f
-                                            )
                                         )
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(16.dp),
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.tag_main_dictionary),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
+                                                style = MaterialTheme.typography.titleSmall,
                                             )
                                             Text(
                                                 text = if (tagDictState.mainImported) {
-                                                    stringResource(
-                                                        R.string.tag_imported_status,
+                                                    pluralStringResource(
+                                                        R.plurals.tag_imported_status,
+                                                        tagDictState.mainEntryCount,
                                                         tagDictState.mainFileName ?: "",
-                                                        tagDictState.mainEntryCount
+                                                        tagDictState.mainEntryCount,
                                                     )
                                                 } else {
                                                     stringResource(R.string.tag_main_dictionary_hint)
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.7f
-                                                )
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .padding(top = 8.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             ) {
                                                 Button(
                                                     onClick = { mainCsvPickerLauncher.launch("*/*") },
                                                     enabled = !tagImportInProgress,
-                                                    modifier = Modifier.weight(1f)
+                                                    modifier = Modifier.weight(1f),
                                                 ) {
                                                     Text(
-                                                        if (tagDictState.mainImported)
+                                                        if (tagDictState.mainImported) {
                                                             stringResource(R.string.tag_reimport)
-                                                        else
+                                                        } else {
                                                             stringResource(R.string.tag_import)
+                                                        },
                                                     )
                                                 }
                                                 if (tagDictState.mainImported) {
                                                     OutlinedButton(
                                                         onClick = { tagRepository.clearMainCsv() },
-                                                        enabled = !tagImportInProgress
+                                                        enabled = !tagImportInProgress,
                                                     ) {
                                                         Text(stringResource(R.string.tag_clear))
                                                     }
@@ -1422,61 +1400,57 @@ fun ModelListScreen(
                                         }
                                         HorizontalDivider(
                                             modifier = Modifier.padding(horizontal = 16.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.2f
-                                            )
                                         )
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(16.dp),
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.tag_translation_dictionary),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
+                                                style = MaterialTheme.typography.titleSmall,
                                             )
                                             Text(
                                                 text = if (tagDictState.translationImported) {
-                                                    stringResource(
-                                                        R.string.tag_imported_status,
+                                                    pluralStringResource(
+                                                        R.plurals.tag_imported_status,
+                                                        tagDictState.translationEntryCount,
                                                         tagDictState.translationFileName ?: "",
-                                                        tagDictState.translationEntryCount
+                                                        tagDictState.translationEntryCount,
                                                     )
                                                 } else {
                                                     stringResource(R.string.tag_translation_dictionary_hint)
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.7f
-                                                )
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .padding(top = 8.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             ) {
                                                 Button(
                                                     onClick = {
                                                         translationCsvPickerLauncher.launch(
-                                                            "*/*"
+                                                            "*/*",
                                                         )
                                                     },
                                                     enabled = !tagImportInProgress,
-                                                    modifier = Modifier.weight(1f)
+                                                    modifier = Modifier.weight(1f),
                                                 ) {
                                                     Text(
-                                                        if (tagDictState.translationImported)
+                                                        if (tagDictState.translationImported) {
                                                             stringResource(R.string.tag_reimport)
-                                                        else
+                                                        } else {
                                                             stringResource(R.string.tag_import)
+                                                        },
                                                     )
                                                 }
                                                 if (tagDictState.translationImported) {
                                                     OutlinedButton(
                                                         onClick = { tagRepository.clearTranslationCsv() },
-                                                        enabled = !tagImportInProgress
+                                                        enabled = !tagImportInProgress,
                                                     ) {
                                                         Text(stringResource(R.string.tag_clear))
                                                     }
@@ -1487,274 +1461,182 @@ fun ModelListScreen(
                                 }
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.sdxl_lowram),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            stringResource(R.string.sdxl_lowram_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                    Switch(
-                                        checked = sdxlLowRam,
-                                        onCheckedChange = {
-                                            sdxlLowRam = it
-                                            preferences.edit {
-                                                putBoolean("sdxl_lowram", it)
-                                            }
+                                SwitchSettingRow(
+                                    title = stringResource(R.string.sdxl_lowram),
+                                    description = stringResource(R.string.sdxl_lowram_hint),
+                                    checked = sdxlLowRam,
+                                    onCheckedChange = {
+                                        sdxlLowRam = it
+                                        preferences.edit { putBoolean("sdxl_lowram", it) }
+                                    },
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                                SwitchSettingRow(
+                                    title = stringResource(R.string.listen_on_all_addresses),
+                                    description = stringResource(R.string.listen_on_all_addresses_hint),
+                                    checked = listenOnAllAddresses,
+                                    onCheckedChange = {
+                                        listenOnAllAddresses = it
+                                        preferences.edit {
+                                            putBoolean("listen_on_all_addresses", it)
                                         }
-                                    )
-                                }
+                                    },
+                                )
                             }
                         }
                     }
-                    // Embedding management section
+                    // Embedding management
                     item {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    stringResource(R.string.embedding_management),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    showEmbeddingManagerDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(stringResource(R.string.embedding_manager))
-                            }
-                        }
+                        SettingNavCard(
+                            icon = Icons.Default.Description,
+                            label = stringResource(R.string.embedding_manager),
+                            onClick = { showEmbeddingManagerDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
 
-                    // File management section
+                    // File management
                     item {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    stringResource(R.string.file_management),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    showFileManagerDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.FolderOpen,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(stringResource(R.string.file_manager))
-
-                            }
-
-                        }
-
+                        SettingNavCard(
+                            icon = Icons.Default.FolderOpen,
+                            label = stringResource(R.string.file_manager),
+                            onClick = { showFileManagerDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
         }
     }
 
-    if (isConverting) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { },
-            contentAlignment = Alignment.Center
-        ) {
+    BlockingProgressOverlay(visible = isConverting) {
+        val byteProgress = extractByteProgress
+        if (byteProgress != null) {
+            SmoothCircularWavyProgressIndicator(
+                progress = byteProgress.fraction,
+                modifier = Modifier.size(72.dp),
+            )
+            Text(
+                text = "${(byteProgress.fraction * 100).toInt()}%  ${formatBytes(byteProgress.extractedBytes)}",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontFeatureSettings = "tnum",
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        } else {
+            ContainedLoadingIndicator()
+            Text(
+                text = if (conversionProgress.isNotEmpty()) {
+                    conversionProgress
+                } else {
+                    stringResource(R.string.converting)
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+
+    BlockingProgressOverlay(
+        visible = downloadingModel != null,
+        minWidth = 320.dp,
+        innerPadding = 24.dp,
+        verticalSpacing = 24.dp,
+    ) {
+        Text(
+            text = stringResource(R.string.downloading_model, downloadingModel?.name ?: ""),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+
+        currentProgress?.let { progress ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                CircularProgressIndicator()
+                SmoothLinearWavyProgressIndicator(
+                    progress = progress.progress,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
                 Text(
-                    text = if (conversionProgress.isNotEmpty()) conversionProgress else stringResource(
-                        R.string.converting
+                    text = "${(progress.progress * 100).toInt()}% - ${formatBytes(progress.downloadedBytes)} / ${
+                        formatBytes(progress.totalBytes)
+                    }",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFeatureSettings = "tnum",
                     ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-    }
-
-    // Compact floating download progress card
-    if (downloadingModel != null) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { },
-            contentAlignment = Alignment.Center
+        } ?: Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                modifier = Modifier.padding(32.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.downloading_model, downloadingModel!!.name),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium
-                )
-
-                currentProgress?.let { progress ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth(0.8f)
-                    ) {
-                        LinearProgressIndicator(
-                            progress = progress.progress,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(MaterialTheme.shapes.extraSmall),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
-                        Text(
-                            text = "${(progress.progress * 100).toInt()}% - ${formatBytes(progress.downloadedBytes)} / ${
-                                formatBytes(
-                                    progress.totalBytes
-                                )
-                            }",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                } ?: Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(R.string.extracting),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = stringResource(R.string.download_background_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
+            ContainedLoadingIndicator()
+            Text(
+                text = stringResource(R.string.extracting),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+
+        Text(
+            text = stringResource(R.string.download_background_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-        bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
-        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-    }
+private fun formatBytes(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
+    else -> String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
 }
 
 @Composable
-fun TabPageIndicator(
-    pageCount: Int,
-    currentPage: Int,
-    modifier: Modifier = Modifier
-) {
+fun TabPageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifier) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier
+        modifier = modifier,
     ) {
         repeat(pageCount) { index ->
             val isSelected = currentPage == index
             val sizeFloat by animateFloatAsState(
                 targetValue = if (isSelected) 10f else 8f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "IndicatorSize"
+                animationSpec = Motion.springExpressiveSpatial(),
+                label = "IndicatorSize",
             )
             val color by animateColorAsState(
-                targetValue = if (isSelected)
+                targetValue = if (isSelected) {
                     MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                animationSpec = tween(durationMillis = 300),
-                label = "IndicatorColor"
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant
+                },
+                animationSpec = tween(Motion.DurationMedium),
+                label = "IndicatorColor",
             )
             Box(
                 modifier = Modifier
                     .size(sizeFloat.dp)
                     .background(
                         color = color,
-                        shape = CircleShape
-                    )
+                        shape = CircleShape,
+                    ),
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ModelCard(
     model: Model,
@@ -1762,95 +1644,91 @@ fun ModelCard(
     isSelectionMode: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onUpdateClick: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
+    val isDisabledInSelection = !model.isDownloaded && isSelectionMode
+
     val elevation by animateFloatAsState(
-        targetValue = if (isSelected) 8f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "CardElevationAnimation"
+        targetValue = if (isSelected) 4f else 1f,
+        animationSpec = Motion.springExpressiveSpatial(),
+        label = "CardElevationAnimation",
     )
 
-    val containerColor = when {
+    val targetContainer = when {
         isSelected -> MaterialTheme.colorScheme.secondaryContainer
-        !model.isDownloaded && isSelectionMode -> MaterialTheme.colorScheme.surfaceContainerLow
-        else -> MaterialTheme.colorScheme.surfaceContainerLowest
+        isDisabledInSelection -> MaterialTheme.colorScheme.surfaceContainerLow
+        else -> MaterialTheme.colorScheme.surfaceContainer
     }
+    val backgroundColor by animateColorAsState(
+        targetValue = targetContainer,
+        animationSpec = tween(Motion.DurationMedium, easing = Motion.Standard),
+        label = "CardBackgroundColorAnimation",
+    )
 
-    val contentColor = when {
+    val primaryContent = when {
         isSelected -> MaterialTheme.colorScheme.onSecondaryContainer
-        !model.isDownloaded && isSelectionMode -> MaterialTheme.colorScheme.onSurface.copy(
-            alpha = 0.5f
-        )
-
+        isDisabledInSelection -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         else -> MaterialTheme.colorScheme.onSurface
     }
-
-    val backgroundColor by animateColorAsState(
-        targetValue = containerColor,
-        animationSpec = tween(durationMillis = 300),
-        label = "CardBackgroundColorAnimation"
-    )
+    val secondaryContent = when {
+        isSelected -> MaterialTheme.colorScheme.onSecondaryContainer
+        isDisabledInSelection -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .pointerInput(isSelectionMode, model.isDownloaded) {
-                detectTapGestures(
-                    onLongPress = {
-                        if (model.isDownloaded && !isSelectionMode) onLongClick()
-                    },
-                    onTap = {
-                        if (!isSelectionMode || (model.isDownloaded)) {
-                            onClick()
-                        }
-                    }
-                )
-            },
+            .combinedClickable(
+                onClick = {
+                    if (!isSelectionMode || model.isDownloaded) onClick()
+                },
+                onLongClick = {
+                    if (model.isDownloaded && !isSelectionMode) onLongClick()
+                },
+            ),
         colors = CardDefaults.elevatedCardColors(
             containerColor = backgroundColor,
-            contentColor = contentColor
+            contentColor = primaryContent,
         ),
         elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = elevation.dp
+            defaultElevation = elevation.dp,
         ),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Surface(
+            Badge(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp),
-                shape = MaterialTheme.shapes.extraSmall,
-                color = if (model.runOnCpu)
+                containerColor = if (model.runOnCpu) {
                     MaterialTheme.colorScheme.tertiaryContainer
-                else
+                } else {
                     MaterialTheme.colorScheme.primaryContainer
+                },
+                contentColor = if (model.runOnCpu) {
+                    MaterialTheme.colorScheme.onTertiaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                },
             ) {
                 Text(
                     text = if (model.runOnCpu) "CPU" else "NPU",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (model.runOnCpu)
-                        MaterialTheme.colorScheme.onTertiaryContainer
-                    else
-                        MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Medium
                 )
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(16.dp),
             ) {
                 Text(
                     text = model.name,
                     style = MaterialTheme.typography.titleLarge,
-                    color = contentColor
+                    fontWeight = FontWeight.Normal,
+                    color = primaryContent,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -1858,132 +1736,120 @@ fun ModelCard(
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = contentColor.copy(alpha = 0.8f)
+                    color = secondaryContent,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SdStorage,
-                                contentDescription = "model size",
-                                tint = contentColor.copy(alpha = 0.6f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = model.approximateSize,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = contentColor.copy(alpha = 0.7f)
-                            )
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AspectRatio,
-                                contentDescription = "image size",
-                                tint = contentColor.copy(alpha = 0.6f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = if (model.runOnCpu) "128~512" else "${model.generationSize}×${model.generationSize}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = contentColor.copy(alpha = 0.7f)
-                            )
-                        }
+                        InfoChip(
+                            icon = Icons.Default.SdStorage,
+                            label = model.approximateSize,
+                            color = secondaryContent,
+                        )
+                        InfoChip(
+                            icon = Icons.Default.AspectRatio,
+                            label = if (model.runOnCpu) {
+                                "128~512"
+                            } else {
+                                "${model.generationSize}×${model.generationSize}"
+                            },
+                            color = secondaryContent,
+                        )
                     }
 
                     when {
                         model.isDownloaded -> {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                val statusColor =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.primary
+                                    }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = "downloaded",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = statusColor,
+                                        modifier = Modifier.size(16.dp),
                                     )
                                     if (!model.needsUpgrade or isSelectionMode) {
                                         Text(
                                             text = stringResource(R.string.downloaded),
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Medium
+                                            color = statusColor,
                                         )
                                     }
                                 }
 
                                 if (model.needsUpgrade && !isSelectionMode) {
-                                    FilledTonalButton(
+                                    AssistChip(
                                         onClick = onUpdateClick,
-                                        modifier = Modifier.height(28.dp),
-                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                        label = { Text(stringResource(R.string.update)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Update,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                                            )
+                                        },
+                                        colors = AssistChipDefaults.assistChipColors(
                                             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                                         ),
-                                        contentPadding = PaddingValues(
-                                            horizontal = 12.dp,
-                                            vertical = 4.dp
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Update,
-                                            contentDescription = "update",
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = stringResource(R.string.update),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
+                                        border = null,
+                                    )
                                 }
                             }
                         }
 
                         else -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CloudDownload,
-                                    contentDescription = "download",
-                                    tint = contentColor.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.download),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = contentColor.copy(alpha = 0.6f)
-                                )
-                            }
+                            InfoChip(
+                                icon = Icons.Default.CloudDownload,
+                                label = stringResource(R.string.download),
+                                color = secondaryContent,
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InfoChip(icon: ImageVector, label: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+        )
     }
 }
 
@@ -1997,12 +1863,9 @@ private fun formatFileSize(size: Long): String {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FileManagerDialog(
-    context: Context,
-    onDismiss: () -> Unit,
-    onFileDeleted: () -> Unit
-) {
+private fun FileManagerDialog(context: Context, onDismiss: () -> Unit, onFileDeleted: () -> Unit) {
     var modelFolders by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var folderFiles by remember { mutableStateOf<List<File>>(emptyList()) }
@@ -2012,7 +1875,9 @@ private fun FileManagerDialog(
     // Tracked separately so the "Clear Cache" button can light up without
     // exposing the cache directory as a fake "file" entry in the list.
     var cacheDir by remember { mutableStateOf<File?>(null) }
-    var cacheSize by remember { mutableStateOf(0L) }
+    var cacheSize by remember { mutableLongStateOf(0L) }
+
+    val msgCacheCleared = stringResource(R.string.cache_cleared)
 
     fun loadFolders() {
         val modelsDir = Model.getModelsDir(context)
@@ -2063,8 +1928,8 @@ private fun FileManagerDialog(
                         showDeleteConfirm = null
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Text(stringResource(R.string.delete))
                 }
@@ -2073,7 +1938,7 @@ private fun FileManagerDialog(
                 TextButton(onClick = { showDeleteConfirm = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -2089,15 +1954,15 @@ private fun FileManagerDialog(
                         showClearCacheConfirm = false
                         Toast.makeText(
                             context,
-                            context.getString(R.string.cache_cleared),
-                            Toast.LENGTH_SHORT
+                            msgCacheCleared,
+                            Toast.LENGTH_SHORT,
                         ).show()
                         onFileDeleted()
                         selectedFolder?.let { loadFilesForFolder(it) }
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Text(stringResource(R.string.clear_cache))
                 }
@@ -2106,7 +1971,7 @@ private fun FileManagerDialog(
                 TextButton(onClick = { showClearCacheConfirm = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -2115,17 +1980,17 @@ private fun FileManagerDialog(
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (selectedFolder != null) {
                     IconButton(
                         onClick = { selectedFolder = null },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back_to_folders),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -2133,7 +1998,6 @@ private fun FileManagerDialog(
                     text = selectedFolder?.let {
                         stringResource(R.string.model_folder, it)
                     } ?: stringResource(R.string.file_manager),
-                    style = MaterialTheme.typography.headlineSmall
                 )
             }
         },
@@ -2141,102 +2005,95 @@ private fun FileManagerDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp)
+                    .height(400.dp),
             ) {
                 if (isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                         Text(
                             stringResource(R.string.loading_files),
                             modifier = Modifier.padding(top = 48.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 } else if (selectedFolder == null) {
                     if (modelFolders.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.Center,
                         ) {
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.FolderOpen,
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     stringResource(R.string.no_model_files),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             items(modelFolders) { (folderName, fileCount) ->
                                 Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .pointerInput(Unit) {
-                                            detectTapGestures(
-                                                onTap = {
-                                                    selectedFolder = folderName
-                                                    loadFilesForFolder(folderName)
-                                                }
-                                            )
-                                        },
+                                    onClick = {
+                                        selectedFolder = folderName
+                                        loadFilesForFolder(folderName)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                    )
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    ),
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(16.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Folder,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
+                                                tint = MaterialTheme.colorScheme.primary,
                                             )
                                             Column {
                                                 Text(
                                                     text = folderName,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    fontWeight = FontWeight.Medium
+                                                    style = MaterialTheme.typography.titleSmall,
                                                 )
                                                 Text(
-                                                    text = stringResource(
-                                                        R.string.file_count,
-                                                        fileCount
+                                                    text = pluralStringResource(
+                                                        R.plurals.file_count,
+                                                        fileCount,
+                                                        fileCount,
                                                     ),
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.6f
-                                                    )
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -2247,55 +2104,52 @@ private fun FileManagerDialog(
                     if (folderFiles.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 stringResource(R.string.no_model_files),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             items(folderFiles) { file ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                    )
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    ),
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(12.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f),
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.InsertDriveFile,
+                                                imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary
+                                                tint = MaterialTheme.colorScheme.secondary,
                                             )
                                             Column {
                                                 Text(
                                                     text = file.name,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Medium
+                                                    style = MaterialTheme.typography.titleSmall,
                                                 )
                                                 Text(
                                                     text = formatFileSize(file.length()),
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(
-                                                        alpha = 0.6f
-                                                    )
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
@@ -2303,12 +2157,12 @@ private fun FileManagerDialog(
                                         IconButton(
                                             onClick = { showDeleteConfirm = file },
                                             colors = IconButtonDefaults.iconButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.error
-                                            )
+                                                contentColor = MaterialTheme.colorScheme.error,
+                                            ),
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.delete_file)
+                                                contentDescription = stringResource(R.string.delete_file),
                                             )
                                         }
                                     }
@@ -2329,122 +2183,96 @@ private fun FileManagerDialog(
                 TextButton(
                     onClick = { showClearCacheConfirm = true },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Icon(
                         imageVector = Icons.Default.CleaningServices,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text(
                         stringResource(
                             R.string.clear_cache_with_size,
-                            formatFileSize(cacheSize)
-                        )
+                            formatFileSize(cacheSize),
+                        ),
                     )
                 }
             }
-        }
+        },
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCustomModelButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() }
-                )
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+fun AddCustomModelButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AddModelOutlinedCard(
+        label = stringResource(R.string.add_custom_model),
+        onClick = onClick,
+        modifier = modifier,
+        accent = false,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddCustomNpuModelButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AddModelOutlinedCard(
+        label = stringResource(R.string.add_custom_npu_model),
+        onClick = onClick,
+        modifier = modifier,
+        accent = true,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddModelOutlinedCard(label: String, onClick: () -> Unit, accent: Boolean, modifier: Modifier = Modifier) {
+    val accentColor = if (accent) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    OutlinedCard(
+        onClick = onClick,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = accentColor,
         ),
-        shape = MaterialTheme.shapes.extraLarge
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.add_custom_model),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
             )
         }
     }
 }
 
 @Composable
-fun AddCustomNpuModelButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() }
-                )
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        ),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.add_custom_npu_model),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-fun CustomNpuModelDialog(
-    context: Context,
-    onDismiss: () -> Unit,
-    onModelAdded: (String, Uri) -> Unit
-) {
+fun CustomNpuModelDialog(context: Context, onDismiss: () -> Unit, onModelAdded: (String, Uri) -> Unit) {
     var modelName by remember { mutableStateOf("") }
     var selectedZipUri by remember { mutableStateOf<Uri?>(null) }
     val isIdReserved = modelName.isNotBlank() &&
-            ModelRepository.isReservedModelId(modelName.replace(" ", ""))
+        ModelRepository.isReservedModelId(modelName.replace(" ", ""))
 
     val zipPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         uri?.let {
             selectedZipUri = it
@@ -2458,21 +2286,16 @@ fun CustomNpuModelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.add_custom_npu_model),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
+        title = { Text(stringResource(R.string.add_custom_npu_model)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     text = stringResource(R.string.custom_npu_model_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 OutlinedTextField(
@@ -2485,24 +2308,26 @@ fun CustomNpuModelDialog(
                     isError = isIdReserved,
                     supportingText = if (isIdReserved) {
                         { Text(stringResource(R.string.custom_model_id_reserved)) }
-                    } else null
+                    } else {
+                        null
+                    },
                 )
 
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = {
                         zipPickerLauncher.launch("application/zip")
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = selectedZipUri?.let { stringResource(R.string.zip_file_selected) }
-                            ?: stringResource(R.string.select_zip_file)
+                            ?: stringResource(R.string.select_zip_file),
                     )
                 }
 
@@ -2510,7 +2335,7 @@ fun CustomNpuModelDialog(
                     Text(
                         text = "Selected: ${getCleanFileName(uri)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -2522,7 +2347,7 @@ fun CustomNpuModelDialog(
                         onModelAdded(modelName, selectedZipUri!!)
                     }
                 },
-                enabled = modelName.isNotBlank() && selectedZipUri != null && !isIdReserved
+                enabled = modelName.isNotBlank() && selectedZipUri != null && !isIdReserved,
             ) {
                 Text(stringResource(R.string.add_model))
             }
@@ -2531,25 +2356,26 @@ fun CustomNpuModelDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CustomModelDialog(
     context: Context,
     onDismiss: () -> Unit,
-    onModelAdded: (String, Uri, Int, List<LoRAFile>) -> Unit
+    onModelAdded: (String, Uri, Int, List<LoRAFile>) -> Unit,
 ) {
     var modelName by remember { mutableStateOf("") }
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
-    var clipSkip by remember { mutableStateOf(1) }
+    var clipSkip by remember { mutableIntStateOf(1) }
     var selectedLoraFiles by remember { mutableStateOf<List<LoRAFile>>(emptyList()) }
     val isIdReserved = modelName.isNotBlank() &&
-            ModelRepository.isReservedModelId(modelName.replace(" ", ""))
+        ModelRepository.isReservedModelId(modelName.replace(" ", ""))
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         uri?.let {
             selectedFileUri = it
@@ -2562,7 +2388,7 @@ fun CustomModelDialog(
     }
 
     val loraPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         uri?.let {
             selectedLoraFiles = selectedLoraFiles + LoRAFile(it)
@@ -2571,21 +2397,16 @@ fun CustomModelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.add_custom_model),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
+        title = { Text(stringResource(R.string.add_custom_model)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     text = stringResource(R.string.custom_model_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 OutlinedTextField(
@@ -2598,52 +2419,60 @@ fun CustomModelDialog(
                     isError = isIdReserved,
                     supportingText = if (isIdReserved) {
                         { Text(stringResource(R.string.custom_model_id_reserved)) }
-                    } else null
+                    } else {
+                        null
+                    },
                 )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(
+                            ButtonGroupDefaults.ConnectedSpaceBetween,
+                        ),
                     ) {
-                        FilterChip(
-                            selected = clipSkip == 1,
-                            onClick = { clipSkip = 1 },
-                            label = { Text("Clip Skip 1") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = clipSkip == 2,
-                            onClick = { clipSkip = 2 },
-                            label = { Text("Clip Skip 2") },
-                            modifier = Modifier.weight(1f)
-                        )
+                        ToggleButton(
+                            checked = clipSkip == 1,
+                            onCheckedChange = { checked -> if (checked) clipSkip = 1 },
+                            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Clip Skip 1")
+                        }
+                        ToggleButton(
+                            checked = clipSkip == 2,
+                            onCheckedChange = { checked -> if (checked) clipSkip = 2 },
+                            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Clip Skip 2")
+                        }
                     }
                     Text(
                         text = stringResource(R.string.clip_skip_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
 
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = {
                         filePickerLauncher.launch("application/octet-stream")
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = selectedFileUri?.let { stringResource(R.string.file_selected) }
-                            ?: stringResource(R.string.select_model_file)
+                            ?: stringResource(R.string.select_model_file),
                     )
                 }
 
@@ -2651,30 +2480,29 @@ fun CustomModelDialog(
                     Text(
                         text = "Selected: ${getCleanFileName(uri)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.lora_files_optional),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
 
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = {
                             loraPickerLauncher.launch("application/octet-stream")
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.add_lora_file))
@@ -2685,7 +2513,7 @@ fun CustomModelDialog(
                         Text(
                             text = stringResource(R.string.selected_lora_files),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
 
@@ -2694,18 +2522,18 @@ fun CustomModelDialog(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 2.dp)
+                                        .padding(vertical = 2.dp),
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
                                             text = "${index + 1}. ${getCleanFileName(loraFile.uri)}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                            modifier = Modifier.weight(1f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f),
                                         )
 
                                         IconButton(
@@ -2713,25 +2541,25 @@ fun CustomModelDialog(
                                                 selectedLoraFiles =
                                                     selectedLoraFiles.filterIndexed { i, _ -> i != index }
                                             },
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(24.dp),
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
                                                 contentDescription = "delete",
                                                 modifier = Modifier.size(16.dp),
-                                                tint = MaterialTheme.colorScheme.error
+                                                tint = MaterialTheme.colorScheme.error,
                                             )
                                         }
                                     }
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
                                             text = stringResource(R.string.lora_weight),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
 
@@ -2748,20 +2576,13 @@ fun CustomModelDialog(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .height(24.dp),
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = MaterialTheme.colorScheme.primary,
-                                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(
-                                                    alpha = 0.3f
-                                                )
-                                            )
                                         )
 
                                         Text(
                                             text = "%.2f".format(loraFile.weight),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                            modifier = Modifier.width(35.dp)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.width(35.dp),
                                         )
                                     }
                                 }
@@ -2778,7 +2599,7 @@ fun CustomModelDialog(
                         onModelAdded(modelName, selectedFileUri!!, clipSkip, selectedLoraFiles)
                     }
                 },
-                enabled = modelName.isNotBlank() && selectedFileUri != null && !isIdReserved
+                enabled = modelName.isNotBlank() && selectedFileUri != null && !isIdReserved,
             ) {
                 Text(stringResource(R.string.add_model))
             }
@@ -2787,8 +2608,29 @@ fun CustomModelDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
+}
+
+@Immutable
+data class ExtractByteProgress(val extractedBytes: Long, val totalCompressedBytes: Long, val fraction: Float)
+
+private class CountingInputStream(delegate: java.io.InputStream) : java.io.FilterInputStream(delegate) {
+    @Volatile
+    var bytesRead: Long = 0L
+        private set
+
+    override fun read(): Int {
+        val b = `in`.read()
+        if (b != -1) bytesRead++
+        return b
+    }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val n = `in`.read(b, off, len)
+        if (n > 0) bytesRead += n
+        return n
+    }
 }
 
 suspend fun extractNpuModel(
@@ -2796,9 +2638,10 @@ suspend fun extractNpuModel(
     modelName: String,
     zipUri: Uri,
     onProgress: (String) -> Unit,
+    onByteProgress: (extractedBytes: Long, totalCompressedBytes: Long, fraction: Float) -> Unit,
     onStart: () -> Unit,
     onSuccess: () -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
 ) = withContext(Dispatchers.IO) {
     try {
         withContext(Dispatchers.Main) {
@@ -2826,35 +2669,75 @@ suspend fun extractNpuModel(
         }
         modelDir.mkdirs()
 
+        val totalCompressedBytes: Long = try {
+            context.contentResolver.openAssetFileDescriptor(zipUri, "r")?.use { it.length }
+                ?: -1L
+        } catch (_: Exception) {
+            -1L
+        }
+
         withContext(Dispatchers.Main) {
             onProgress(context.getString(R.string.extracting_zip_file))
         }
 
-        val inputStream = context.contentResolver.openInputStream(zipUri)
+        val rawInputStream = context.contentResolver.openInputStream(zipUri)
             ?: throw Exception("Cannot open selected zip file")
 
-        ZipInputStream(inputStream.buffered()).use { zipInputStream ->
-            var zipEntry = zipInputStream.nextEntry
+        val countingStream = CountingInputStream(rawInputStream)
+        val extractedBytesAtomic = AtomicLong(0L)
 
-            while (zipEntry != null) {
-                if (!zipEntry.isDirectory) {
-                    val fileName = zipEntry.name.substringAfterLast('/')
+        coroutineScope {
+            val progressJob = launch {
+                while (isActive) {
+                    delay(120L)
+                    val fraction = if (totalCompressedBytes > 0) {
+                        (countingStream.bytesRead.toFloat() / totalCompressedBytes)
+                            .coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                    onByteProgress(extractedBytesAtomic.get(), totalCompressedBytes, fraction)
+                }
+            }
 
-                    if (fileName.isNotEmpty() && !fileName.startsWith(".") && !fileName.startsWith("__MACOSX")) {
-                        val outputFile = File(modelDir, fileName)
+            try {
+                ZipInputStream(countingStream.buffered()).use { zipInputStream ->
+                    var zipEntry = zipInputStream.nextEntry
 
-                        BufferedOutputStream(outputFile.outputStream()).use { outputStream ->
-                            zipInputStream.copyTo(outputStream)
+                    while (zipEntry != null) {
+                        if (!zipEntry.isDirectory) {
+                            val fileName = zipEntry.name.substringAfterLast('/')
+
+                            if (fileName.isNotEmpty() &&
+                                !fileName.startsWith(".") &&
+                                !fileName.startsWith("__MACOSX")
+                            ) {
+                                val outputFile = File(modelDir, fileName)
+
+                                BufferedOutputStream(outputFile.outputStream()).use { outputStream ->
+                                    val tracking = object : OutputStream() {
+                                        override fun write(b: Int) {
+                                            outputStream.write(b)
+                                            extractedBytesAtomic.incrementAndGet()
+                                        }
+                                        override fun write(b: ByteArray, off: Int, len: Int) {
+                                            outputStream.write(b, off, len)
+                                            extractedBytesAtomic.addAndGet(len.toLong())
+                                        }
+                                    }
+                                    zipInputStream.copyTo(tracking)
+                                }
+                            }
                         }
-
-                        withContext(Dispatchers.Main) {
-                            onProgress("Extracted: $fileName")
-                        }
+                        zipEntry = zipInputStream.nextEntry
                     }
                 }
-                zipEntry = zipInputStream.nextEntry
+            } finally {
+                progressJob.cancel()
             }
         }
+
+        onByteProgress(extractedBytesAtomic.get(), totalCompressedBytes, 1f)
 
         if (modelId != "upscaler_anime" && modelId != "upscaler_realistic") {
             val npuCustomFile = File(modelDir, "npucustom")
@@ -2864,7 +2747,6 @@ suspend fun extractNpuModel(
         withContext(Dispatchers.Main) {
             onSuccess()
         }
-
     } catch (e: Exception) {
         Log.e("NpuModelExtract", "Extraction failed", e)
 
@@ -2880,12 +2762,13 @@ suspend fun extractNpuModel(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EmbeddingManagerDialog(
     context: Context,
     onDismiss: () -> Unit,
     onEmbeddingDeleted: () -> Unit,
-    onEmbeddingImported: () -> Unit
+    onEmbeddingImported: () -> Unit,
 ) {
     var embeddingFiles by remember { mutableStateOf<List<File>>(emptyList()) }
     var showDeleteConfirm by remember { mutableStateOf<File?>(null) }
@@ -2906,7 +2789,7 @@ fun EmbeddingManagerDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val embeddingPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         uri?.let {
             scope.launch {
@@ -2929,7 +2812,7 @@ fun EmbeddingManagerDialog(
                 TextButton(onClick = { errorMessage = null }) {
                     Text(stringResource(R.string.confirm))
                 }
-            }
+            },
         )
     }
 
@@ -2945,8 +2828,8 @@ fun EmbeddingManagerDialog(
                 Text(
                     stringResource(
                         R.string.delete_embedding_confirm,
-                        showDeleteConfirm!!.name
-                    )
+                        showDeleteConfirm!!.name,
+                    ),
                 )
             },
             confirmButton = {
@@ -2960,8 +2843,8 @@ fun EmbeddingManagerDialog(
                         showDeleteConfirm = null
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Text(stringResource(R.string.delete))
                 }
@@ -2970,52 +2853,47 @@ fun EmbeddingManagerDialog(
                 TextButton(onClick = { showDeleteConfirm = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.embedding_manager),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
+        title = { Text(stringResource(R.string.embedding_manager)) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp)
+                    .height(400.dp),
             ) {
                 if (isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                     }
                 } else if (embeddingFiles.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Description,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 stringResource(R.string.no_embeddings),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -3024,44 +2902,41 @@ fun EmbeddingManagerDialog(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(embeddingFiles) { file ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                )
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ),
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Description,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint = MaterialTheme.colorScheme.primary,
                                         )
                                         Column {
                                             Text(
                                                 text = file.nameWithoutExtension,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
+                                                style = MaterialTheme.typography.titleSmall,
                                             )
                                             Text(
                                                 text = formatFileSize(file.length()),
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.6f
-                                                )
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
@@ -3069,12 +2944,12 @@ fun EmbeddingManagerDialog(
                                     IconButton(
                                         onClick = { showDeleteConfirm = file },
                                         colors = IconButtonDefaults.iconButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
-                                        )
+                                            contentColor = MaterialTheme.colorScheme.error,
+                                        ),
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = stringResource(R.string.delete_embedding)
+                                            contentDescription = stringResource(R.string.delete_embedding),
                                         )
                                     }
                                 }
@@ -3085,16 +2960,16 @@ fun EmbeddingManagerDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = {
                         embeddingPickerLauncher.launch("application/octet-stream")
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.import_embedding))
@@ -3105,16 +2980,11 @@ fun EmbeddingManagerDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
-        }
+        },
     )
 }
 
-suspend fun importEmbedding(
-    context: Context,
-    fileUri: Uri,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) = withContext(Dispatchers.IO) {
+suspend fun importEmbedding(context: Context, fileUri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) = withContext(Dispatchers.IO) {
     try {
         val embeddingsDir = File(context.filesDir, "embeddings")
         if (!embeddingsDir.exists()) {
@@ -3163,7 +3033,7 @@ suspend fun convertCustomModel(
     onProgress: (String) -> Unit,
     onStart: () -> Unit,
     onSuccess: () -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
 ) = withContext(Dispatchers.IO) {
     try {
         withContext(Dispatchers.Main) {
@@ -3258,7 +3128,7 @@ suspend fun convertCustomModel(
                             Log.w(
                                 "ModelConvert",
                                 "Could not copy file: $subAssetPath",
-                                e
+                                e,
                             )
                         }
                     } else {
@@ -3286,7 +3156,7 @@ suspend fun convertCustomModel(
         var command = listOf(
             executableFile.absolutePath,
             "--convert",
-            modelDir.absolutePath
+            modelDir.absolutePath,
         )
         val clipSourceFile =
             File(modelDir, if (clipSkip == 2) "clip_skip_2.mnn" else "clip_skip_1.mnn")
@@ -3300,7 +3170,7 @@ suspend fun convertCustomModel(
             nativeDir,
             "/system/lib64",
             "/vendor/lib64",
-            "/vendor/lib64/egl"
+            "/vendor/lib64/egl",
         ).joinToString(":")
 
         env["LD_LIBRARY_PATH"] = systemLibPaths
@@ -3359,7 +3229,6 @@ suspend fun convertCustomModel(
                 onError("Model conversion failed: Please use SD1.5 safetensors model")
             }
         }
-
     } catch (e: Exception) {
         Log.e("ModelConvert", "Conversion failed", e)
 
@@ -3375,30 +3244,276 @@ suspend fun convertCustomModel(
     }
 }
 
-private fun getFileNameFromUri(context: Context, uri: Uri): String? {
-    return try {
-        when (uri.scheme) {
-            "content" -> {
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (cursor.moveToFirst() && nameIndex != -1) {
-                        cursor.getString(nameIndex)
-                    } else {
-                        null
+private fun getFileNameFromUri(context: Context, uri: Uri): String? = try {
+    when (uri.scheme) {
+        "content" -> {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex != -1) {
+                    cursor.getString(nameIndex)
+                } else {
+                    null
+                }
+            }
+        }
+
+        "file" -> {
+            uri.lastPathSegment
+        }
+
+        else -> {
+            DocumentFile.fromSingleUri(context, uri)?.name
+        }
+    }
+} catch (e: Exception) {
+    Log.e("GetFileName", "Get file name from uri failed", e)
+    null
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingNavCard(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(16.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SwitchSettingRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppearanceSection() {
+    val themeController = LocalThemeController.current
+    val state = themeController.state
+    val dynamicColorSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val isDark = when (state.darkMode) {
+        DarkModePreference.SYSTEM -> isSystemInDarkTheme()
+        DarkModePreference.LIGHT -> false
+        DarkModePreference.DARK -> true
+    }
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(bottom = 12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Palette,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                stringResource(R.string.appearance),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
+        ) {
+            if (dynamicColorSupported) {
+                SwitchSettingRow(
+                    title = stringResource(R.string.dynamic_color),
+                    description = stringResource(R.string.dynamic_color_hint),
+                    checked = state.dynamicColor,
+                    onCheckedChange = { value ->
+                        themeController.update { it.copy(dynamicColor = value) }
+                    },
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.theme_preset),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(R.string.theme_preset_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ThemePreset.entries.forEach { preset ->
+                        ThemeSwatch(
+                            preset = preset,
+                            isDark = isDark,
+                            selected = preset == state.preset && !state.dynamicColor,
+                            enabled = !state.dynamicColor,
+                            onClick = {
+                                themeController.update { it.copy(preset = preset) }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
-
-            "file" -> {
-                uri.lastPathSegment
-            }
-
-            else -> {
-                DocumentFile.fromSingleUri(context, uri)?.name
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.dark_mode),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        ButtonGroupDefaults.ConnectedSpaceBetween,
+                    ),
+                ) {
+                    val modes = DarkModePreference.entries
+                    modes.forEachIndexed { index, mode ->
+                        val shapes = when (index) {
+                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        }
+                        ToggleButton(
+                            checked = mode == state.darkMode,
+                            onCheckedChange = { checked ->
+                                if (checked) themeController.update { it.copy(darkMode = mode) }
+                            },
+                            shapes = shapes,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    when (mode) {
+                                        DarkModePreference.SYSTEM -> R.string.dark_mode_system
+                                        DarkModePreference.LIGHT -> R.string.dark_mode_light
+                                        DarkModePreference.DARK -> R.string.dark_mode_dark
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
             }
         }
-    } catch (e: Exception) {
-        Log.e("GetFileName", "Get file name from uri failed", e)
-        null
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ThemeSwatch(
+    preset: ThemePreset,
+    isDark: Boolean,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = preset.scheme(isDark)
+    val alpha = if (enabled) 1f else 0.45f
+    val description = stringResource(preset.nameRes)
+    val polygon = when (preset) {
+        ThemePreset.TANGERINE -> MaterialShapes.Cookie9Sided
+        ThemePreset.FOREST -> MaterialShapes.Clover4Leaf
+        ThemePreset.OCEAN -> MaterialShapes.Sunny
+        ThemePreset.AMBER -> MaterialShapes.Cookie6Sided
+    }
+    val shape = polygon.toShape()
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = shape,
+            color = scheme.primary.copy(alpha = alpha),
+            border = if (selected) {
+                BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
+            modifier = Modifier
+                .size(48.dp)
+                .semantics { contentDescription = description },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (selected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = scheme.onPrimary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+        }
     }
 }

@@ -2,14 +2,14 @@ package io.github.xororz.localdream.utils
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 object LogCapture {
     private const val TAG = "LogCapture"
@@ -36,7 +36,7 @@ object LogCapture {
             try {
                 val pid = android.os.Process.myPid()
                 val proc = Runtime.getRuntime().exec(
-                    arrayOf("logcat", "--pid=$pid", "-v", "threadtime")
+                    arrayOf("logcat", "--pid=$pid", "-v", "threadtime"),
                 )
                 captureProcess = proc
                 val scope = CoroutineScope(Dispatchers.IO)

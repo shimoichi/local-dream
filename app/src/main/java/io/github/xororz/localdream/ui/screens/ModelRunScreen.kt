@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import android.graphics.Canvas
+import android.graphics.Rect as AndroidRect
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -23,6 +24,11 @@ import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -32,21 +38,18 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -59,6 +62,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -66,7 +71,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -91,36 +95,44 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,35 +140,42 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
-import androidx.compose.runtime.Immutable
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.DownloadProgress
-import io.github.xororz.localdream.data.GenerationPreferences
 import io.github.xororz.localdream.data.GenerationMode
+import io.github.xororz.localdream.data.GenerationPreferences
 import io.github.xororz.localdream.data.HistoryFilter
 import io.github.xororz.localdream.data.HistoryItem
 import io.github.xororz.localdream.data.HistoryManager
@@ -172,13 +191,16 @@ import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
 import io.github.xororz.localdream.service.ModelDownloadService
+import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.GenerationParamsDialog
 import io.github.xororz.localdream.ui.components.ImportParametersDialog
 import io.github.xororz.localdream.ui.components.OverlayIconButton
 import io.github.xororz.localdream.ui.components.PromptTagTextField
 import io.github.xororz.localdream.ui.components.ReproduceParametersDialog
 import io.github.xororz.localdream.ui.components.ShareParametersDialog
+import io.github.xororz.localdream.ui.components.SmoothLinearWavyProgressIndicator
 import io.github.xororz.localdream.ui.components.ZoomableImageOverlay
+import io.github.xororz.localdream.ui.theme.Motion
 import io.github.xororz.localdream.utils.ImportedParams
 import io.github.xororz.localdream.utils.LogCapture
 import io.github.xororz.localdream.utils.ParamShare
@@ -186,6 +208,13 @@ import io.github.xororz.localdream.utils.ParamShareField
 import io.github.xororz.localdream.utils.performUpscale
 import io.github.xororz.localdream.utils.reportImage
 import io.github.xororz.localdream.utils.saveImage
+import io.github.xororz.localdream.utils.saveImageFromFile
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.Base64
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -200,26 +229,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.util.Base64
-import java.util.concurrent.TimeUnit
-import kotlin.math.roundToInt
-import android.graphics.Rect as AndroidRect
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.scale
-import androidx.core.content.edit
 
-
-private fun checkStoragePermission(context: Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        true // Android 10
-    } else {
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
-    }
+private fun checkStoragePermission(context: Context): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    true // Android 10
+} else {
+    ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+    ) == PackageManager.PERMISSION_GRANTED
 }
 
 private val tokenizeClient: OkHttpClient by lazy {
@@ -232,38 +249,37 @@ private val tokenizeClient: OkHttpClient by lazy {
 
 private data class TokenizeResult(val count: Int, val maxLength: Int)
 
-private suspend fun tokenizePromptRequest(text: String): TokenizeResult? =
-    withContext(Dispatchers.IO) {
-        try {
-            val body = JSONObject().apply { put("prompt", text) }
-                .toString()
-                .toRequestBody("application/json".toMediaTypeOrNull())
-            val request = Request.Builder()
-                .url("http://localhost:8081/tokenize")
-                .post(body)
-                .build()
-            tokenizeClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val payload = response.body?.string() ?: return@withContext null
-                val json = JSONObject(payload)
-                TokenizeResult(
-                    count = json.optInt("count", 0),
-                    maxLength = json.optInt("max_length", 77)
-                )
-            }
-        } catch (_: Exception) {
-            null
+private suspend fun tokenizePromptRequest(text: String): TokenizeResult? = withContext(Dispatchers.IO) {
+    try {
+        val body = JSONObject().apply { put("prompt", text) }
+            .toString()
+            .toRequestBody("application/json".toMediaTypeOrNull())
+        val request = Request.Builder()
+            .url("http://localhost:8081/tokenize")
+            .post(body)
+            .build()
+        tokenizeClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@withContext null
+            val payload = response.body?.string() ?: return@withContext null
+            val json = JSONObject(payload)
+            TokenizeResult(
+                count = json.optInt("count", 0),
+                maxLength = json.optInt("max_length", 77),
+            )
         }
+    } catch (_: Exception) {
+        null
     }
+}
 
 private suspend fun checkBackendHealth(
     backendState: StateFlow<BackendService.BackendState>,
     onHealthy: () -> Unit,
-    onUnhealthy: () -> Unit
+    onUnhealthy: () -> Unit,
 ) = withContext(Dispatchers.IO) {
     try {
         val client = OkHttpClient.Builder()
-            .connectTimeout(100, TimeUnit.MILLISECONDS)  // 100ms
+            .connectTimeout(100, TimeUnit.MILLISECONDS) // 100ms
             .build()
 
         val startTime = System.currentTimeMillis()
@@ -318,11 +334,7 @@ private suspend fun checkBackendHealth(
  * a multiple of 8. Returns null in all other cases (non-SDXL, 1:1, malformed),
  * meaning "no padding, use canvas size directly."
  */
-fun computeAspectTargetSize(
-    isSdxl: Boolean,
-    aspectRatio: String,
-    canvasMax: Int = 1024
-): Pair<Int, Int>? {
+fun computeAspectTargetSize(isSdxl: Boolean, aspectRatio: String, canvasMax: Int = 1024): Pair<Int, Int>? {
     if (!isSdxl) return null
     val parts = aspectRatio.split(":")
     if (parts.size != 2) return null
@@ -347,7 +359,9 @@ fun inferAspectRatioString(width: Int, height: Int): String {
     var a = width
     var b = height
     while (b != 0) {
-        val t = b; b = a % b; a = t
+        val t = b
+        b = a % b
+        a = t
     }
     return "${width / a}:${height / a}"
 }
@@ -357,11 +371,7 @@ fun inferAspectRatioString(width: Int, height: Int): String {
  * with a centered placement and black borders. If src already matches canvas size,
  * returns the source unchanged.
  */
-fun padBitmapToCanvas(
-    src: Bitmap,
-    canvasW: Int,
-    canvasH: Int
-): Bitmap {
+fun padBitmapToCanvas(src: Bitmap, canvasW: Int, canvasH: Int): Bitmap {
     if (src.width == canvasW && src.height == canvasH) return src
     val out = createBitmap(canvasW, canvasH)
     val canvas = Canvas(out)
@@ -390,21 +400,34 @@ data class GenerationParameters(
 )
 
 @SuppressLint("DefaultLocale")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ModelRunScreen(
-    modelId: String,
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
+fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modifier = Modifier) {
     val serviceState by BackgroundGenerationService.generationState.collectAsState()
     val backendState by BackendService.backendState.collectAsState()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val generationPreferences = remember { GenerationPreferences(context) }
     val coroutineScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val modelRepository = remember { ModelRepository(context) }
+
+    // String resources hoisted to composable scope (lint: LocalContextGetResourceValueCall).
+    val msgMediaPermissionHint = stringResource(R.string.media_permission_hint)
+    val msgBackendFailed = stringResource(R.string.backend_failed)
+    val msgImportNoParams = stringResource(R.string.import_no_params)
+    val msgImageSaved = stringResource(R.string.image_saved)
+    val msgDownloadDone = stringResource(R.string.download_done)
+    val msgErrorDownloadFailed = stringResource(R.string.error_download_failed)
+    val msgDownloadModelFirst = stringResource(R.string.download_model_first)
+    val msgDeleted = stringResource(R.string.deleted)
+    val msgDeleteFailedMessage = stringResource(R.string.delete_failed_message)
+    val msgShareCopied = stringResource(R.string.share_copied)
+    val msgImportApplied = stringResource(R.string.import_applied)
+    val msgUpscaleFailed = stringResource(R.string.upscale_failed)
+    val msgSavedCountWithFailed = stringResource(R.string.saved_count_with_failed)
+    val msgDeletedCountWithFailed = stringResource(R.string.deleted_count_with_failed)
     val model = remember { modelRepository.models.find { it.id == modelId } }
     val historyManager = remember { HistoryManager(context) }
     val scrollBehavior =
@@ -423,7 +446,7 @@ fun ModelRunScreen(
 
     var currentBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var intermediateBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var imageVersion by remember { mutableStateOf(0) }
+    var imageVersion by remember { mutableIntStateOf(0) }
     var generationParams by remember { mutableStateOf<GenerationParameters?>(null) }
     var generationParamsModelId by remember { mutableStateOf(modelId) }
 
@@ -464,9 +487,9 @@ fun ModelRunScreen(
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
     var showBatchSaveDialog by remember { mutableStateOf(false) }
     var isBatchSaving by remember { mutableStateOf(false) }
-    var batchSaveTotal by remember { mutableStateOf(0) }
-    var batchSaveCurrent by remember { mutableStateOf(0) }
-    var batchSaveFailed by remember { mutableStateOf(0) }
+    var batchSaveTotal by remember { mutableIntStateOf(0) }
+    var batchSaveCurrent by remember { mutableIntStateOf(0) }
+    var batchSaveFailed by remember { mutableIntStateOf(0) }
 
     var generationParamsTmp by remember {
         mutableStateOf(
@@ -477,10 +500,22 @@ fun ModelRunScreen(
                 prompt = "",
                 negativePrompt = "",
                 generationTime = "",
-                width = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
-                height = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
-                runOnCpu = model?.runOnCpu ?: false
-            )
+                width = if (model?.isSdxl == true) {
+                    1024
+                } else if (model?.runOnCpu == true) {
+                    256
+                } else {
+                    512
+                },
+                height = if (model?.isSdxl == true) {
+                    1024
+                } else if (model?.runOnCpu == true) {
+                    256
+                } else {
+                    512
+                },
+                runOnCpu = model?.runOnCpu ?: false,
+            ),
         )
     }
     var prompt by remember { mutableStateOf("") }
@@ -493,21 +528,21 @@ fun ModelRunScreen(
     var negativePromptActiveQuery by remember { mutableStateOf<String?>(null) }
     var isPromptFocused by remember { mutableStateOf(false) }
     var isNegativePromptFocused by remember { mutableStateOf(false) }
-    var cfg by remember { mutableStateOf(7f) }
-    var steps by remember { mutableStateOf(20f) }
+    var cfg by remember { mutableFloatStateOf(7f) }
+    var steps by remember { mutableFloatStateOf(20f) }
     var seed by remember { mutableStateOf("") }
-    var denoiseStrength by remember { mutableStateOf(0.6f) }
+    var denoiseStrength by remember { mutableFloatStateOf(0.6f) }
     var useOpenCL by remember { mutableStateOf(false) }
-    var batchCounts by remember { mutableStateOf(1) }
+    var batchCounts by remember { mutableIntStateOf(1) }
     var scheduler by remember { mutableStateOf("dpm") }
     var aspectRatio by remember { mutableStateOf("1:1") }
     var showCustomAspectRatioDialog by remember { mutableStateOf(false) }
-    var currentBatchIndex by remember { mutableStateOf(0) }
+    var currentBatchIndex by remember { mutableIntStateOf(0) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var base64EncodeDone by remember { mutableStateOf(false) }
     var returnedSeed by remember { mutableStateOf<Long?>(null) }
     var isRunning by remember { mutableStateOf(false) }
-    var progress by remember { mutableStateOf(0f) }
+    var progress by remember { mutableFloatStateOf(0f) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isCheckingBackend by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
@@ -517,16 +552,37 @@ fun ModelRunScreen(
     var hasInitialized by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
 
-    var currentWidth by remember { mutableStateOf(if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512) }
-    var currentHeight by remember { mutableStateOf(if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512) }
+    var currentWidth by remember {
+        mutableIntStateOf(
+            if (model?.isSdxl ==
+                true
+            ) {
+                1024
+            } else if (model?.runOnCpu == true) {
+                256
+            } else {
+                512
+            },
+        )
+    }
+    var currentHeight by remember {
+        mutableIntStateOf(
+            if (model?.isSdxl ==
+                true
+            ) {
+                1024
+            } else if (model?.runOnCpu == true) {
+                256
+            } else {
+                512
+            },
+        )
+    }
     var availableResolutions by remember { mutableStateOf<List<Resolution>>(emptyList()) }
     var showResolutionChangeDialog by remember { mutableStateOf(false) }
     var pendingResolution by remember { mutableStateOf<Resolution?>(null) }
-    var backendRestartTrigger by remember { mutableStateOf(0) }
+    var backendRestartTrigger by remember { mutableIntStateOf(0) }
     var showAdvancedSettings by remember { mutableStateOf(false) }
-
-    val isFirstPage by remember { derivedStateOf { pagerState.currentPage == 0 } }
-    val isSecondPage by remember { derivedStateOf { pagerState.currentPage == 1 } }
 
     var isPreviewMode by remember { mutableStateOf(false) }
     val preferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -637,13 +693,23 @@ fun ModelRunScreen(
                 useOpenCL = useOpenCL,
                 batchCounts = batchCounts,
                 scheduler = scheduler,
-                aspectRatio = aspectRatio
+                aspectRatio = aspectRatio,
             )
         }
     }
 
-    val onStepsChange = remember { { value: Float -> steps = value; saveAllFields() } }
-    val onCfgChange = remember { { value: Float -> cfg = value; saveAllFields() } }
+    val onStepsChange = remember {
+        { value: Float ->
+            steps = value
+            saveAllFields()
+        }
+    }
+    val onCfgChange = remember {
+        { value: Float ->
+            cfg = value
+            saveAllFields()
+        }
+    }
     val onSizeChange = remember {
         { value: Float ->
             val rounded = (value / 64).roundToInt() * 64
@@ -654,15 +720,25 @@ fun ModelRunScreen(
         }
     }
     val onDenoiseStrengthChange =
-        remember { { value: Float -> denoiseStrength = value; saveAllFields() } }
-    val onSeedChange = remember { { value: String -> seed = value; saveAllFields() } }
+        remember {
+            { value: Float ->
+                denoiseStrength = value
+                saveAllFields()
+            }
+        }
+    val onSeedChange = remember {
+        { value: String ->
+            seed = value
+            saveAllFields()
+        }
+    }
     var promptSuggestJob by remember { mutableStateOf<Job?>(null) }
     var negativePromptSuggestJob by remember { mutableStateOf<Job?>(null) }
 
-    var promptTokenCount by remember { mutableStateOf(2) }
-    var negativePromptTokenCount by remember { mutableStateOf(2) }
-    var promptTokenMax by remember { mutableStateOf(77) }
-    var negativePromptTokenMax by remember { mutableStateOf(77) }
+    var promptTokenCount by remember { mutableIntStateOf(2) }
+    var negativePromptTokenCount by remember { mutableIntStateOf(2) }
+    var promptTokenMax by remember { mutableIntStateOf(77) }
+    var negativePromptTokenMax by remember { mutableIntStateOf(77) }
 
     LaunchedEffect(prompt, isCheckingBackend) {
         if (isCheckingBackend) return@LaunchedEffect
@@ -702,7 +778,7 @@ fun ModelRunScreen(
                 matchType = TagMatchType.Embedding,
                 category = 0,
                 postCount = 0,
-                score = 0
+                score = 0,
             )
             if (idx == 0) prefix += suggestion else contains += suggestion
         }
@@ -781,7 +857,7 @@ fun ModelRunScreen(
         val (updatedText, updatedSelection) = TagAutocompleteRepository.applySuggestion(
             promptFieldValue.text,
             promptFieldValue.selection.start,
-            suggestion
+            suggestion,
         )
         prompt = updatedText
         promptFieldValue = TextFieldValue(updatedText, TextRange(updatedSelection))
@@ -794,7 +870,7 @@ fun ModelRunScreen(
         val (updatedText, updatedSelection) = TagAutocompleteRepository.applySuggestion(
             negativePromptFieldValue.text,
             negativePromptFieldValue.selection.start,
-            suggestion
+            suggestion,
         )
         negativePrompt = updatedText
         negativePromptFieldValue = TextFieldValue(updatedText, TextRange(updatedSelection))
@@ -815,6 +891,7 @@ fun ModelRunScreen(
         showCropScreen = true
     }
 
+    @Suppress("UnusedParameter") // base64String from cropify callback is re-derived later
     fun handleCropComplete(base64String: String, bitmap: Bitmap, rect: AndroidRect) {
         showCropScreen = false
         val sourceUri = imageUriForCrop
@@ -850,7 +927,7 @@ fun ModelRunScreen(
                             @Suppress("DEPRECATION")
                             val decoder = BitmapRegionDecoder.newInstance(input, false)
                                 ?: throw IllegalStateException(
-                                    "BitmapRegionDecoder.newInstance returned null"
+                                    "BitmapRegionDecoder.newInstance returned null",
                                 )
                             try {
                                 val safeLeft = rect.left.coerceAtLeast(0)
@@ -859,11 +936,16 @@ fun ModelRunScreen(
                                 val safeBottom = rect.bottom.coerceAtMost(decoder.height)
                                 if (safeRight > safeLeft && safeBottom > safeTop) {
                                     val region = AndroidRect(
-                                        safeLeft, safeTop, safeRight, safeBottom
+                                        safeLeft,
+                                        safeTop,
+                                        safeRight,
+                                        safeBottom,
                                     )
                                     clampedRect = region
                                     decoder.decodeRegion(region, BitmapFactory.Options())
-                                } else null
+                                } else {
+                                    null
+                                }
                             } finally {
                                 decoder.recycle()
                             }
@@ -872,7 +954,7 @@ fun ModelRunScreen(
                 } catch (e: Exception) {
                     Log.w(
                         "ModelRunScreen",
-                        "BitmapRegionDecoder failed, fall back to cropify bitmap: ${e.message}"
+                        "BitmapRegionDecoder failed, fall back to cropify bitmap: ${e.message}",
                     )
                     null
                 }
@@ -920,11 +1002,7 @@ fun ModelRunScreen(
         }
     }
 
-    fun handleInpaintComplete(
-        maskBase64: String,
-        maskBmp: Bitmap,
-        pathHistory: List<PathData>
-    ) {
+    fun handleInpaintComplete(maskBase64: String, maskBmp: Bitmap, pathHistory: List<PathData>) {
         showInpaintScreen = false
         isInpaintMode = true
         maskBitmap = maskBmp
@@ -1026,7 +1104,7 @@ fun ModelRunScreen(
                 Toast.makeText(
                     context,
                     "img2img failed: ${e.message}",
-                    Toast.LENGTH_SHORT
+                    Toast.LENGTH_SHORT,
                 ).show()
                 base64EncodeDone = false
                 selectedImageUri = null
@@ -1047,41 +1125,27 @@ fun ModelRunScreen(
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        PickVisualMedia()
+        PickVisualMedia(),
     ) { uri ->
         uri?.let { processSelectedImage(it) }
     }
 
     val contentPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.GetContent(),
     ) { uri ->
         uri?.let { processSelectedImage(it) }
     }
 
-    val requestMediaImagePermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            contentPickerLauncher.launch("image/*")
-        } else {
-            Toast.makeText(
-                context,
-                context.getString(R.string.media_permission_hint),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
     val requestStoragePermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { isGranted ->
         if (isGranted) {
             contentPickerLauncher.launch("image/*")
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.media_permission_hint),
-                Toast.LENGTH_SHORT
+                msgMediaPermissionHint,
+                Toast.LENGTH_SHORT,
             ).show()
         }
     }
@@ -1099,7 +1163,7 @@ fun ModelRunScreen(
                 when {
                     ContextCompat.checkSelfPermission(
                         context,
-                        Manifest.permission.READ_EXTERNAL_STORAGE
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
                     ) == PackageManager.PERMISSION_GRANTED -> {
                         contentPickerLauncher.launch("image/*")
                     }
@@ -1112,12 +1176,7 @@ fun ModelRunScreen(
         }
     }
 
-    fun handleSaveImage(
-        context: Context,
-        bitmap: Bitmap,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun handleSaveImage(context: Context, bitmap: Bitmap, onSuccess: () -> Unit, onError: (String) -> Unit) {
         if (!checkStoragePermission(context)) {
             onError("need storage permission to save image")
             return
@@ -1130,11 +1189,11 @@ fun ModelRunScreen(
         //  - the source img2img/inpaint image was a real gallery image with a decodable
         //    URI (not a synthetic tmp.txt from sendBitmapToImg2img).
         val shouldStitch = snapshotIsInpaintMode &&
-                snapshotCropRect != null &&
-                snapshotSelectedImageUri != null &&
-                snapshotHasOriginalImage &&
-                snapshotHistoryItemId != null &&
-                currentDisplayedHistoryId == snapshotHistoryItemId
+            snapshotCropRect != null &&
+            snapshotSelectedImageUri != null &&
+            snapshotHasOriginalImage &&
+            snapshotHistoryItemId != null &&
+            currentDisplayedHistoryId == snapshotHistoryItemId
 
         coroutineScope.launch {
             if (shouldStitch) {
@@ -1156,14 +1215,14 @@ fun ModelRunScreen(
                             resizedPatch,
                             snapshotCropRect!!.left.toFloat(),
                             snapshotCropRect!!.top.toFloat(),
-                            null
+                            null,
                         )
 
                         saveImage(
                             context = context,
                             bitmap = mutableOriginal,
                             onSuccess = onSuccess,
-                            onError = onError
+                            onError = onError,
                         )
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
@@ -1176,7 +1235,7 @@ fun ModelRunScreen(
                     context = context,
                     bitmap = bitmap,
                     onSuccess = onSuccess,
-                    onError = onError
+                    onError = onError,
                 )
             }
         }
@@ -1221,6 +1280,9 @@ fun ModelRunScreen(
             if (captureEnabled) {
                 LogCapture.stopAndPublish()
             }
+            // Safety net for paths that bypass handleExit() (e.g. predictive back
+            // popping the destination while not running).
+            BackgroundGenerationService.clearCompleteState()
         }
     }
 
@@ -1250,7 +1312,7 @@ fun ModelRunScreen(
                         negativePrompt = m.defaultNegativePrompt
                         negativePromptFieldValue = TextFieldValue(
                             m.defaultNegativePrompt,
-                            TextRange(m.defaultNegativePrompt.length)
+                            TextRange(m.defaultNegativePrompt.length),
                         )
                     }
                     saveAllFields()
@@ -1273,13 +1335,21 @@ fun ModelRunScreen(
             aspectRatio = prefs.aspectRatio
 
             currentWidth =
-                if (model?.isSdxl == true) 1024
-                else if (prefs.width == -1) (if (model?.runOnCpu == true) 256 else 512)
-                else prefs.width
+                if (model?.isSdxl == true) {
+                    1024
+                } else if (prefs.width == -1) {
+                    (if (model?.runOnCpu == true) 256 else 512)
+                } else {
+                    prefs.width
+                }
             currentHeight =
-                if (model?.isSdxl == true) 1024
-                else if (prefs.height == -1) (if (model?.runOnCpu == true) 256 else 512)
-                else prefs.height
+                if (model?.isSdxl == true) {
+                    1024
+                } else if (prefs.height == -1) {
+                    (if (model?.runOnCpu == true) 256 else 512)
+                } else {
+                    prefs.height
+                }
 
             hasInitialized = true
         }
@@ -1345,11 +1415,14 @@ fun ModelRunScreen(
                         val duration = endTime - startTime
                         when {
                             duration < 1000 -> "${duration}ms"
-                            duration < 60000 -> String.format("%.1fs", duration / 1000.0)
+
+                            duration < 60000 -> String.format(Locale.US, "%.1fs", duration / 1000.0)
+
                             else -> String.format(
+                                Locale.US,
                                 "%dm%ds",
                                 duration / 60000,
-                                (duration % 60000) / 1000
+                                (duration % 60000) / 1000,
                             )
                         }
                     }
@@ -1411,7 +1484,7 @@ fun ModelRunScreen(
 
                     Log.d(
                         "ModelRunScreen",
-                        "params update: ${generationParams?.steps}, ${generationParams?.cfg}"
+                        "params update: ${generationParams?.steps}, ${generationParams?.cfg}",
                     )
 
                     generationStartTime = null
@@ -1443,12 +1516,10 @@ fun ModelRunScreen(
         }
     }
 
-    BackHandler {
-        if (isRunning) {
-            showExitDialog = true
-        } else {
-            handleExit()
-        }
+    // Only intercept back when a generation is running, so the predictive back
+    // gesture can show NavHost's peek of the previous destination in idle state.
+    if (isRunning) {
+        BackHandler { showExitDialog = true }
     }
 
     if (showExitDialog) {
@@ -1461,7 +1532,7 @@ fun ModelRunScreen(
                     onClick = {
                         showExitDialog = false
                         handleExit()
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -1470,7 +1541,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showExitDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
     if (showOpenCLWarningDialog) {
@@ -1484,7 +1555,7 @@ fun ModelRunScreen(
                         showOpenCLWarningDialog = false
                         useOpenCL = true
                         saveAllFields()
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -1493,7 +1564,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showOpenCLWarningDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -1508,45 +1579,47 @@ fun ModelRunScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         stringResource(R.string.aspect_ratio_custom_hint),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         OutlinedTextField(
                             value = ratioWStr,
                             onValueChange = {
-                                ratioWStr = it.filter { c -> c.isDigit() }.take(5); ratioError =
-                                false
+                                ratioWStr = it.filter { c -> c.isDigit() }.take(5)
+                                ratioError =
+                                    false
                             },
                             label = { Text("W") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.medium,
-                            isError = ratioError
+                            isError = ratioError,
                         )
                         Text(":", style = MaterialTheme.typography.titleLarge)
                         OutlinedTextField(
                             value = ratioHStr,
                             onValueChange = {
-                                ratioHStr = it.filter { c -> c.isDigit() }.take(5); ratioError =
-                                false
+                                ratioHStr = it.filter { c -> c.isDigit() }.take(5)
+                                ratioError =
+                                    false
                             },
                             label = { Text("H") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             shape = MaterialTheme.shapes.medium,
-                            isError = ratioError
+                            isError = ratioError,
                         )
                     }
                     if (ratioError) {
                         Text(
                             stringResource(R.string.aspect_ratio_invalid),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -1572,7 +1645,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showCustomAspectRatioDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -1592,7 +1665,13 @@ fun ModelRunScreen(
                             val oldRatio =
                                 if (currentHeight > 0) currentWidth.toFloat() / currentHeight.toFloat() else 1f
                             val newRatio =
-                                if (resolution.height > 0) resolution.width.toFloat() / resolution.height.toFloat() else 1f
+                                if (resolution.height >
+                                    0
+                                ) {
+                                    resolution.width.toFloat() / resolution.height.toFloat()
+                                } else {
+                                    1f
+                                }
 
                             if (kotlin.math.abs(oldRatio - newRatio) > 0.01f) {
                                 // Clear img2img data
@@ -1612,7 +1691,7 @@ fun ModelRunScreen(
                                 generationPreferences.saveResolution(
                                     modelId,
                                     resolution.width,
-                                    resolution.height
+                                    resolution.height,
                                 )
                             }
                             model?.let { m ->
@@ -1631,7 +1710,7 @@ fun ModelRunScreen(
                         showResolutionChangeDialog = false
                         pendingResolution = null
                         showAdvancedSettings = false
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -1641,11 +1720,11 @@ fun ModelRunScreen(
                     onClick = {
                         showResolutionChangeDialog = false
                         pendingResolution = null
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -1679,20 +1758,32 @@ fun ModelRunScreen(
                                 steps = 20f,
                                 cfg = 7f,
                                 seed = "",
-                                width = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
-                                height = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
+                                width = if (model?.isSdxl == true) {
+                                    1024
+                                } else if (model?.runOnCpu == true) {
+                                    256
+                                } else {
+                                    512
+                                },
+                                height = if (model?.isSdxl == true) {
+                                    1024
+                                } else if (model?.runOnCpu == true) {
+                                    256
+                                } else {
+                                    512
+                                },
                                 denoiseStrength = 0.6f,
                                 useOpenCL = useOpenCL,
                                 batchCounts = 1,
                                 scheduler = "dpm",
-                                aspectRatio = "1:1"
+                                aspectRatio = "1:1",
                             )
                         }
                         showResetConfirmDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
@@ -1701,7 +1792,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showResetConfirmDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -1713,8 +1804,8 @@ fun ModelRunScreen(
             },
             onUnhealthy = {
                 isCheckingBackend = false
-                errorMessage = context.getString(R.string.backend_failed)
-            }
+                errorMessage = msgBackendFailed
+            },
         )
     }
 
@@ -1728,12 +1819,11 @@ fun ModelRunScreen(
                 },
                 onUnhealthy = {
                     isCheckingBackend = false
-                    errorMessage = context.getString(R.string.backend_failed)
-                }
+                    errorMessage = msgBackendFailed
+                },
             )
         }
     }
-
 
     // === Page Composable Functions ===
     @Composable
@@ -1744,64 +1834,69 @@ fun ModelRunScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AnimatedVisibility(
                 visible = intermediateBitmap == null,
                 enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
             ) {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 stringResource(R.string.prompt_settings),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
                             )
                             Row(
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 if (useImg2img) {
                                     TextButton(
-                                        onClick = {
-                                            onSelectImageClick()
-                                        }
+                                        onClick = { onSelectImageClick() },
+                                        contentPadding = PaddingValues(
+                                            horizontal = 8.dp,
+                                            vertical = 8.dp,
+                                        ),
                                     ) {
                                         Text(
                                             "img2img",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(end = 4.dp)
+                                            modifier = Modifier.padding(end = 4.dp),
                                         )
                                         Icon(
                                             Icons.Default.Image,
                                             contentDescription = "select image",
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(20.dp),
                                         )
                                     }
                                 }
                                 TextButton(
-                                    onClick = { showAdvancedSettings = true }
+                                    onClick = { showAdvancedSettings = true },
+                                    contentPadding = PaddingValues(
+                                        horizontal = 8.dp,
+                                        vertical = 8.dp,
+                                    ),
                                 ) {
                                     Text(
                                         stringResource(R.string.advanced_settings),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(end = 4.dp)
+                                        modifier = Modifier.padding(end = 4.dp),
                                     )
                                     Icon(
                                         Icons.Default.Settings,
                                         contentDescription = stringResource(R.string.settings),
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                             }
@@ -1813,15 +1908,17 @@ fun ModelRunScreen(
                                     title = {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
                                                 stringResource(R.string.advanced_settings_title),
-                                                modifier = Modifier.weight(1f)
+                                                modifier = Modifier.weight(1f),
                                             )
                                             IconButton(onClick = {
                                                 val clipboard =
-                                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                                    context.getSystemService(
+                                                        Context.CLIPBOARD_SERVICE,
+                                                    ) as? ClipboardManager
                                                 val raw = clipboard?.primaryClip
                                                     ?.takeIf { it.itemCount > 0 }
                                                     ?.getItemAt(0)
@@ -1834,14 +1931,14 @@ fun ModelRunScreen(
                                                 } else {
                                                     Toast.makeText(
                                                         context,
-                                                        context.getString(R.string.import_no_params),
-                                                        Toast.LENGTH_SHORT
+                                                        msgImportNoParams,
+                                                        Toast.LENGTH_SHORT,
                                                     ).show()
                                                 }
                                             }) {
                                                 Icon(
                                                     imageVector = Icons.Default.ContentPaste,
-                                                    contentDescription = stringResource(R.string.import_from_clipboard)
+                                                    contentDescription = stringResource(R.string.import_from_clipboard),
                                                 )
                                             }
                                             IconButton(onClick = {
@@ -1869,7 +1966,7 @@ fun ModelRunScreen(
                                             }) {
                                                 Icon(
                                                     imageVector = Icons.Default.Share,
-                                                    contentDescription = stringResource(R.string.share)
+                                                    contentDescription = stringResource(R.string.share),
                                                 )
                                             }
                                         }
@@ -1877,18 +1974,18 @@ fun ModelRunScreen(
                                     text = {
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(
-                                                2.dp
+                                                2.dp,
                                             ),
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .verticalScroll(rememberScrollState())
-                                                .padding(vertical = 4.dp)
+                                                .padding(vertical = 4.dp),
                                         ) {
                                             if (model?.isSdxl == true) {
                                                 Column(modifier = Modifier.fillMaxWidth()) {
                                                     Text(
                                                         stringResource(R.string.aspect_ratio),
-                                                        style = MaterialTheme.typography.bodyMedium
+                                                        style = MaterialTheme.typography.bodyMedium,
                                                     )
                                                     val presets = listOf("1:1", "3:4", "4:3")
                                                     val isCustom = aspectRatio !in presets
@@ -1897,43 +1994,55 @@ fun ModelRunScreen(
                                                             .fillMaxWidth()
                                                             .horizontalScroll(rememberScrollState()),
                                                         horizontalArrangement = Arrangement.spacedBy(
-                                                            8.dp
-                                                        )
+                                                            ButtonGroupDefaults.ConnectedSpaceBetween,
+                                                        ),
                                                     ) {
-                                                        presets.forEach { ratio ->
-                                                            FilterChip(
-                                                                selected = aspectRatio == ratio,
-                                                                onClick = {
-                                                                    if (!isRunning && aspectRatio != ratio) {
+                                                        presets.forEachIndexed { index, ratio ->
+                                                            val shapes = if (index == 0) {
+                                                                ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                                            } else {
+                                                                ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                            }
+                                                            ToggleButton(
+                                                                checked = aspectRatio == ratio,
+                                                                onCheckedChange = { checked ->
+                                                                    if (checked && !isRunning && aspectRatio != ratio) {
                                                                         aspectRatio = ratio
                                                                         clearImg2imgState()
                                                                         saveAllFields()
                                                                     }
                                                                 },
-                                                                label = { Text(ratio) },
-                                                                enabled = !isRunning
-                                                            )
+                                                                shapes = shapes,
+                                                                enabled = !isRunning,
+                                                            ) {
+                                                                Text(ratio)
+                                                            }
                                                         }
-                                                        FilterChip(
-                                                            selected = isCustom,
-                                                            onClick = {
+                                                        ToggleButton(
+                                                            checked = isCustom,
+                                                            onCheckedChange = {
                                                                 if (!isRunning) {
-                                                                    showCustomAspectRatioDialog =
-                                                                        true
+                                                                    showCustomAspectRatioDialog = true
                                                                 }
                                                             },
-                                                            label = {
-                                                                Text(
-                                                                    if (isCustom) aspectRatio
-                                                                    else stringResource(R.string.aspect_ratio_custom)
-                                                                )
-                                                            },
-                                                            enabled = !isRunning
-                                                        )
+                                                            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                                            enabled = !isRunning,
+                                                        ) {
+                                                            Text(
+                                                                if (isCustom) {
+                                                                    aspectRatio
+                                                                } else {
+                                                                    stringResource(R.string.aspect_ratio_custom)
+                                                                },
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
-                                            if (model?.runOnCpu == false && model.isSdxl == false && availableResolutions.isNotEmpty()) {
+                                            if (model?.runOnCpu == false &&
+                                                model.isSdxl == false &&
+                                                availableResolutions.isNotEmpty()
+                                            ) {
                                                 Column(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     // verticalArrangement = Arrangement.spacedBy(
@@ -1942,36 +2051,47 @@ fun ModelRunScreen(
                                                 ) {
                                                     Text(
                                                         stringResource(R.string.resolution),
-                                                        style = MaterialTheme.typography.bodyMedium
+                                                        style = MaterialTheme.typography.bodyMedium,
                                                     )
                                                     Row(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .horizontalScroll(
-                                                                rememberScrollState()
+                                                                rememberScrollState(),
                                                             ),
                                                         horizontalArrangement = Arrangement.spacedBy(
-                                                            8.dp
-                                                        )
+                                                            ButtonGroupDefaults.ConnectedSpaceBetween,
+                                                        ),
                                                     ) {
-                                                        availableResolutions.forEach { resolution ->
-                                                            FilterChip(
-                                                                selected = currentWidth == resolution.width && currentHeight == resolution.height,
-                                                                onClick = {
-                                                                    if (!isRunning && (resolution.width != currentWidth || resolution.height != currentHeight)) {
-                                                                        pendingResolution =
-                                                                            resolution
-                                                                        showResolutionChangeDialog =
-                                                                            true
+                                                        availableResolutions.forEachIndexed { index, resolution ->
+                                                            val shapes = when (index) {
+                                                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+
+                                                                availableResolutions.lastIndex ->
+                                                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
+
+                                                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                            }
+                                                            ToggleButton(
+                                                                checked = currentWidth == resolution.width &&
+                                                                    currentHeight == resolution.height,
+                                                                onCheckedChange = { checked ->
+                                                                    if (checked &&
+                                                                        !isRunning &&
+                                                                        (
+                                                                            resolution.width != currentWidth ||
+                                                                                resolution.height != currentHeight
+                                                                            )
+                                                                    ) {
+                                                                        pendingResolution = resolution
+                                                                        showResolutionChangeDialog = true
                                                                     }
                                                                 },
-                                                                label = {
-                                                                    Text(
-                                                                        resolution.toString()
-                                                                    )
-                                                                },
-                                                                enabled = !isRunning
-                                                            )
+                                                                shapes = shapes,
+                                                                enabled = !isRunning,
+                                                            ) {
+                                                                Text(resolution.toString())
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -2011,7 +2131,7 @@ fun ModelRunScreen(
                                                             .alpha(if (karrasSupported) 1f else 0.4f),
                                                     )
                                                     CompositionLocalProvider(
-                                                        LocalMinimumInteractiveComponentSize provides Dp.Unspecified
+                                                        LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
                                                     ) {
                                                         Switch(
                                                             checked = karras && karrasSupported,
@@ -2032,23 +2152,37 @@ fun ModelRunScreen(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .horizontalScroll(rememberScrollState()),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    horizontalArrangement = Arrangement.spacedBy(
+                                                        ButtonGroupDefaults.ConnectedSpaceBetween,
+                                                    ),
                                                 ) {
-                                                    baseOptions.forEach { (id, label) ->
-                                                        FilterChip(
-                                                            selected = baseId == id,
-                                                            onClick = {
-                                                                val nextKarras =
-                                                                    karras && id != "lcm"
-                                                                scheduler = if (nextKarras) {
-                                                                    "${id}_karras"
-                                                                } else {
-                                                                    id
+                                                    baseOptions.forEachIndexed { index, (id, label) ->
+                                                        val shapes = when (index) {
+                                                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+
+                                                            baseOptions.lastIndex ->
+                                                                ButtonGroupDefaults.connectedTrailingButtonShapes()
+
+                                                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                        }
+                                                        ToggleButton(
+                                                            checked = baseId == id,
+                                                            onCheckedChange = { checked ->
+                                                                if (checked) {
+                                                                    val nextKarras =
+                                                                        karras && id != "lcm"
+                                                                    scheduler = if (nextKarras) {
+                                                                        "${id}_karras"
+                                                                    } else {
+                                                                        id
+                                                                    }
+                                                                    saveAllFields()
                                                                 }
-                                                                saveAllFields()
                                                             },
-                                                            label = { Text(label) }
-                                                        )
+                                                            shapes = shapes,
+                                                        ) {
+                                                            Text(label)
+                                                        }
                                                     }
                                                 }
                                             }
@@ -2057,30 +2191,30 @@ fun ModelRunScreen(
                                                 Text(
                                                     stringResource(
                                                         R.string.steps,
-                                                        steps.roundToInt()
+                                                        steps.roundToInt(),
                                                     ),
-                                                    style = MaterialTheme.typography.bodyMedium
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
                                                 Slider(
                                                     value = steps,
                                                     onValueChange = onStepsChange,
                                                     valueRange = 1f..50f,
                                                     steps = 48,
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    modifier = Modifier.fillMaxWidth(),
                                                 )
                                             }
 
                                             Column {
                                                 Text(
                                                     "CFG Scale: %.1f".format(cfg),
-                                                    style = MaterialTheme.typography.bodyMedium
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
                                                 Slider(
                                                     value = cfg,
                                                     onValueChange = onCfgChange,
                                                     valueRange = 1f..30f,
                                                     steps = 57,
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    modifier = Modifier.fillMaxWidth(),
                                                 )
                                             }
                                             if (model?.runOnCpu ?: false) {
@@ -2089,16 +2223,16 @@ fun ModelRunScreen(
                                                         stringResource(
                                                             R.string.image_size,
                                                             currentWidth,
-                                                            currentHeight
+                                                            currentHeight,
                                                         ),
-                                                        style = MaterialTheme.typography.bodyMedium
+                                                        style = MaterialTheme.typography.bodyMedium,
                                                     )
                                                     Slider(
                                                         value = currentWidth.toFloat(),
                                                         onValueChange = onSizeChange,
                                                         valueRange = 128f..512f,
                                                         steps = 5,
-                                                        modifier = Modifier.fillMaxWidth()
+                                                        modifier = Modifier.fillMaxWidth(),
                                                     )
                                                 }
                                             }
@@ -2107,87 +2241,86 @@ fun ModelRunScreen(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(
-                                                        8.dp
-                                                    )
+                                                        ButtonGroupDefaults.ConnectedSpaceBetween,
+                                                    ),
                                                 ) {
                                                     Text(
                                                         "Runtime",
-                                                        style = MaterialTheme.typography.bodyMedium
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(end = 4.dp),
                                                     )
-                                                    FilterChip(
-                                                        selected = !useOpenCL,
-                                                        onClick = {
-                                                            useOpenCL = false
-                                                            saveAllFields()
-                                                        },
-                                                        label = { Text("CPU") },
-                                                        modifier = Modifier.weight(
-                                                            1f
-                                                        )
-                                                    )
-                                                    FilterChip(
-                                                        selected = useOpenCL,
-                                                        onClick = {
-                                                            if (!useOpenCL) {
-                                                                showOpenCLWarningDialog =
-                                                                    true
-                                                            } else {
+                                                    ToggleButton(
+                                                        checked = !useOpenCL,
+                                                        onCheckedChange = { checked ->
+                                                            if (checked) {
                                                                 useOpenCL = false
                                                                 saveAllFields()
                                                             }
                                                         },
-                                                        label = { Text("GPU") },
-                                                        modifier = Modifier.weight(
-                                                            1f
-                                                        )
-                                                    )
+                                                        shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                                        modifier = Modifier.weight(1f),
+                                                    ) {
+                                                        Text("CPU")
+                                                    }
+                                                    ToggleButton(
+                                                        checked = useOpenCL,
+                                                        onCheckedChange = { checked ->
+                                                            if (checked) {
+                                                                showOpenCLWarningDialog = true
+                                                            }
+                                                        },
+                                                        shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                                        modifier = Modifier.weight(1f),
+                                                    ) {
+                                                        Text("GPU")
+                                                    }
                                                 }
                                             }
                                             Column {
                                                 Text(
                                                     stringResource(
                                                         R.string.batch_count,
-                                                        batchCounts
+                                                        batchCounts,
                                                     ),
-                                                    style = MaterialTheme.typography.bodyMedium
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                 )
                                                 Slider(
                                                     value = batchCounts.toFloat(),
                                                     onValueChange = onBatchCountsChange,
                                                     valueRange = 1f..10f,
                                                     steps = 8,
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    modifier = Modifier.fillMaxWidth(),
                                                 )
                                             }
                                             if (useImg2img) {
                                                 Column {
                                                     Text(
                                                         "[img2img]Denoise Strength: %.2f".format(
-                                                            denoiseStrength
+                                                            denoiseStrength,
                                                         ),
-                                                        style = MaterialTheme.typography.bodyMedium
+                                                        style = MaterialTheme.typography.bodyMedium,
                                                     )
                                                     Slider(
                                                         value = denoiseStrength,
                                                         onValueChange = onDenoiseStrengthChange,
                                                         valueRange = 0f..1f,
                                                         steps = 99,
-                                                        modifier = Modifier.fillMaxWidth()
+                                                        modifier = Modifier.fillMaxWidth(),
                                                     )
                                                 }
                                             }
                                             Column(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 verticalArrangement = Arrangement.spacedBy(
-                                                    8.dp
-                                                )
+                                                    8.dp,
+                                                ),
                                             ) {
                                                 OutlinedTextField(
                                                     value = seed,
                                                     onValueChange = onSeedChange,
                                                     label = { Text(stringResource(R.string.random_seed)) },
                                                     keyboardOptions = KeyboardOptions(
-                                                        keyboardType = KeyboardType.Number
+                                                        keyboardType = KeyboardType.Number,
                                                     ),
                                                     modifier = Modifier.fillMaxWidth(),
                                                     shape = MaterialTheme.shapes.medium,
@@ -2199,11 +2332,11 @@ fun ModelRunScreen(
                                                             }) {
                                                                 Icon(
                                                                     Icons.Default.Clear,
-                                                                    contentDescription = "clear"
+                                                                    contentDescription = "clear",
                                                                 )
                                                             }
                                                         }
-                                                    }
+                                                    },
                                                 )
 
                                                 if (returnedSeed != null) {
@@ -2213,24 +2346,24 @@ fun ModelRunScreen(
                                                                 returnedSeed.toString()
                                                             saveAllFields()
                                                         },
-                                                        modifier = Modifier.fillMaxWidth()
+                                                        modifier = Modifier.fillMaxWidth(),
                                                     ) {
                                                         Icon(
                                                             Icons.Default.Refresh,
                                                             contentDescription = stringResource(
-                                                                R.string.use_last_seed
+                                                                R.string.use_last_seed,
                                                             ),
                                                             modifier = Modifier
                                                                 .size(
-                                                                    20.dp
+                                                                    20.dp,
                                                                 )
-                                                                .padding(end = 4.dp)
+                                                                .padding(end = 4.dp),
                                                         )
                                                         Text(
                                                             stringResource(
                                                                 R.string.use_last_seed,
-                                                                returnedSeed.toString()
-                                                            )
+                                                                returnedSeed.toString(),
+                                                            ),
                                                         )
                                                     }
                                                 }
@@ -2240,24 +2373,24 @@ fun ModelRunScreen(
                                     confirmButton = {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                            horizontalArrangement = Arrangement.SpaceBetween,
                                         ) {
                                             TextButton(
                                                 onClick = {
                                                     showResetConfirmDialog = true
                                                 },
                                                 colors = ButtonDefaults.textButtonColors(
-                                                    contentColor = MaterialTheme.colorScheme.error
-                                                )
+                                                    contentColor = MaterialTheme.colorScheme.error,
+                                                ),
                                             ) {
                                                 Icon(
                                                     Icons.Default.Refresh,
                                                     contentDescription = stringResource(
-                                                        R.string.reset
+                                                        R.string.reset,
                                                     ),
                                                     modifier = Modifier
                                                         .size(20.dp)
-                                                        .padding(end = 4.dp)
+                                                        .padding(end = 4.dp),
                                                 )
                                                 Text(stringResource(R.string.reset))
                                             }
@@ -2268,7 +2401,7 @@ fun ModelRunScreen(
                                                 Text(stringResource(R.string.confirm))
                                             }
                                         }
-                                    }
+                                    },
                                 )
                             }
                         }
@@ -2281,7 +2414,7 @@ fun ModelRunScreen(
                                 PromptCountLabel(
                                     label = stringResource(R.string.image_prompt),
                                     count = promptTokenCount,
-                                    max = promptTokenMax
+                                    max = promptTokenMax,
                                 )
                             },
                             suggestions = promptSuggestions,
@@ -2291,7 +2424,7 @@ fun ModelRunScreen(
                             onFocusChanged = {
                                 isPromptFocused = it
                                 if (!it) promptSuggestions = emptyList()
-                            }
+                            },
                         )
 
                         PromptTagTextField(
@@ -2302,7 +2435,7 @@ fun ModelRunScreen(
                                 PromptCountLabel(
                                     label = stringResource(R.string.negative_prompt),
                                     count = negativePromptTokenCount,
-                                    max = negativePromptTokenMax
+                                    max = negativePromptTokenMax,
                                 )
                             },
                             suggestions = negativePromptSuggestions,
@@ -2312,7 +2445,7 @@ fun ModelRunScreen(
                             onFocusChanged = {
                                 isNegativePromptFocused = it
                                 if (!it) negativePromptSuggestions = emptyList()
-                            }
+                            },
                         )
 
                         Button(
@@ -2320,7 +2453,7 @@ fun ModelRunScreen(
                                 focusManager.clearFocus()
                                 Log.d(
                                     "ModelRunScreen",
-                                    "start generation"
+                                    "start generation",
                                 )
                                 generationParamsTmp = GenerationParameters(
                                     steps = steps.roundToInt(),
@@ -2334,12 +2467,12 @@ fun ModelRunScreen(
                                     runOnCpu = model?.runOnCpu ?: false,
                                     denoiseStrength = denoiseStrength,
                                     useOpenCL = useOpenCL,
-                                    scheduler = scheduler
+                                    scheduler = scheduler,
                                 )
 
                                 Log.d(
                                     "ModelRunScreen",
-                                    "start generation batch: $batchCounts times"
+                                    "start generation batch: $batchCounts times",
                                 )
 
                                 // If seed is set, only generate once regardless of batch count
@@ -2351,7 +2484,7 @@ fun ModelRunScreen(
                                         currentBatchIndex = i + 1
                                         Log.d(
                                             "ModelRunScreen",
-                                            "preparing batch $i"
+                                            "preparing batch $i",
                                         )
 
                                         // Update generationParamsTmp to reflect current parameters
@@ -2368,17 +2501,17 @@ fun ModelRunScreen(
                                             runOnCpu = model?.runOnCpu ?: false,
                                             denoiseStrength = denoiseStrength,
                                             useOpenCL = useOpenCL,
-                                            scheduler = scheduler
+                                            scheduler = scheduler,
                                         )
 
                                         val batchIntent = Intent(
                                             context,
-                                            BackgroundGenerationService::class.java
+                                            BackgroundGenerationService::class.java,
                                         ).apply {
                                             putExtra("prompt", prompt)
                                             putExtra(
                                                 "negative_prompt",
-                                                negativePrompt
+                                                negativePrompt,
                                             )
                                             putExtra("steps", steps.roundToInt())
                                             putExtra("cfg", cfg)
@@ -2394,7 +2527,7 @@ fun ModelRunScreen(
                                             putExtra("effective_height", effectiveHeight)
                                             putExtra(
                                                 "denoise_strength",
-                                                denoiseStrength
+                                                denoiseStrength,
                                             )
                                             putExtra("use_opencl", useOpenCL)
                                             putExtra("scheduler", scheduler)
@@ -2410,24 +2543,24 @@ fun ModelRunScreen(
 
                                         Log.d(
                                             "ModelRunScreen",
-                                            "start service - batch $i"
+                                            "start service - batch $i",
                                         )
 
                                         context.startForegroundService(batchIntent)
                                         Log.d(
                                             "ModelRunScreen",
-                                            "start service sent - batch $i"
+                                            "start service sent - batch $i",
                                         )
 
                                         BackgroundGenerationService.generationState
                                             .first { state ->
                                                 state is GenerationState.Complete ||
-                                                        state is GenerationState.Error
+                                                    state is GenerationState.Error
                                             }
 
                                         Log.d(
                                             "ModelRunScreen",
-                                            "batch $i completed, waiting for service to stop"
+                                            "batch $i completed, waiting for service to stop",
                                         )
 
                                         // Wait for service to actually stop
@@ -2438,7 +2571,7 @@ fun ModelRunScreen(
                                             if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
                                                 Log.w(
                                                     "ModelRunScreen",
-                                                    "Timeout waiting for service to stop"
+                                                    "Timeout waiting for service to stop",
                                                 )
                                                 break
                                             }
@@ -2447,47 +2580,49 @@ fun ModelRunScreen(
 
                                         Log.d(
                                             "ModelRunScreen",
-                                            "service stopped, wait time: ${System.currentTimeMillis() - waitStartTime}ms"
+                                            "service stopped, wait time: ${System.currentTimeMillis() - waitStartTime}ms",
                                         )
 
                                         BackgroundGenerationService.resetState()
                                         Log.d(
                                             "ModelRunScreen",
-                                            "service state reset, ready for next batch"
+                                            "service state reset, ready for next batch",
                                         )
                                     }
                                     currentBatchIndex = 0
                                     isRunning = false
                                     Log.d(
                                         "ModelRunScreen",
-                                        "all batches completed, isRunning set to false"
+                                        "all batches completed, isRunning set to false",
                                     )
                                 }
                             },
                             enabled = serviceState !is GenerationState.Progress && !isRunning && !isUpscaling,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium
+                            shape = MaterialTheme.shapes.medium,
                         ) {
                             AnimatedContent(
                                 targetState = serviceState is GenerationState.Progress || isUpscaling,
                                 transitionSpec = {
-                                    (fadeIn(animationSpec = tween(200)) + scaleIn(
-                                        initialScale = 0.8f,
-                                        animationSpec = tween(200)
-                                    ))
+                                    (
+                                        fadeIn(animationSpec = tween(Motion.DurationShort)) + scaleIn(
+                                            initialScale = 0.8f,
+                                            animationSpec = tween(Motion.DurationShort),
+                                        )
+                                        )
                                         .togetherWith(
-                                            fadeOut(animationSpec = tween(200)) + scaleOut(
+                                            fadeOut(animationSpec = tween(Motion.DurationShort)) + scaleOut(
                                                 targetScale = 0.8f,
-                                                animationSpec = tween(200)
-                                            )
+                                                animationSpec = tween(Motion.DurationShort),
+                                            ),
                                         )
                                 },
-                                label = "GenerateButtonContent"
+                                label = "GenerateButtonContent",
                             ) { isLoading ->
                                 if (isLoading) {
-                                    CircularProgressIndicator(
+                                    LoadingIndicator(
                                         modifier = Modifier.size(24.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 } else {
                                     Text(stringResource(R.string.generate_image))
@@ -2500,31 +2635,30 @@ fun ModelRunScreen(
             AnimatedVisibility(
                 visible = errorMessage != null,
                 enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                exit = shrinkVertically() + fadeOut(),
             ) {
                 errorMessage?.let { msg ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { errorMessage = null },
+                        onClick = { errorMessage = null },
+                        modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
                                 Icons.Default.Error,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
                             )
                             Text(
                                 msg,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
@@ -2533,41 +2667,38 @@ fun ModelRunScreen(
             AnimatedVisibility(
                 visible = isRunning,
                 enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                exit = shrinkVertically() + fadeOut(),
             ) {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = if (currentBatchIndex > 0) "${
+                            text = if (currentBatchIndex > 0) {
+                                "${
+                                    stringResource(
+                                        R.string.generating,
+                                    )
+                                } ($currentBatchIndex/$batchCounts)…"
+                            } else {
                                 stringResource(
-                                    R.string.generating
+                                    R.string.generating,
                                 )
-                            } ($currentBatchIndex/$batchCounts)…" else stringResource(
-                                R.string.generating
-                            ),
-                            style = MaterialTheme.typography.titleMedium
+                            },
+                            style = MaterialTheme.typography.titleMedium,
                         )
-                        val animatedProgress by animateFloatAsState(
-                            targetValue = progress,
-                            animationSpec = tween(durationMillis = 300),
-                            label = "ProgressAnimation"
-                        )
-                        LinearProgressIndicator(
-                            progress = { animatedProgress },
+                        SmoothLinearWavyProgressIndicator(
+                            progress = progress,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
                             "${(progress * 100).toInt()}%",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.7f
-                            )
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         intermediateBitmap?.let { bitmap ->
                             Spacer(modifier = Modifier.height(8.dp))
@@ -2575,13 +2706,13 @@ fun ModelRunScreen(
                                 shape = MaterialTheme.shapes.small,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(1f)
+                                    .aspectRatio(1f),
                             ) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
                                     contentDescription = "Generation Preview",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                    contentScale = ContentScale.Fit,
                                 )
                             }
                         }
@@ -2592,17 +2723,17 @@ fun ModelRunScreen(
             AnimatedVisibility(
                 visible = selectedImageUri != null && base64EncodeDone,
                 enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                exit = shrinkVertically() + fadeOut(),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 8.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
+                        horizontalArrangement = Arrangement.Start,
                     ) {
                         Card(
                             modifier = Modifier
@@ -2613,24 +2744,24 @@ fun ModelRunScreen(
                                 croppedBitmap?.let { bitmap ->
                                     AsyncImage(
                                         model = ImageRequest.Builder(
-                                            LocalContext.current
+                                            LocalContext.current,
                                         )
                                             .data(bitmap)
                                             .crossfade(true)
                                             .build(),
                                         contentDescription = "Cropped Image",
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 } ?: selectedImageUri?.let { uri ->
                                     AsyncImage(
                                         model = ImageRequest.Builder(
-                                            LocalContext.current
+                                            LocalContext.current,
                                         )
                                             .data(uri)
                                             .crossfade(true)
                                             .build(),
                                         contentDescription = "Selected Image",
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 }
                                 IconButton(
@@ -2647,16 +2778,16 @@ fun ModelRunScreen(
                                         .size(24.dp)
                                         .background(
                                             color = MaterialTheme.colorScheme.surface.copy(
-                                                alpha = 0.7f
+                                                alpha = 0.7f,
                                             ),
-                                            shape = CircleShape
+                                            shape = CircleShape,
                                         )
-                                        .align(Alignment.TopEnd)
+                                        .align(Alignment.TopEnd),
                                 ) {
                                     Icon(
                                         Icons.Default.Clear,
                                         contentDescription = "Remove Image",
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(16.dp),
                                     )
                                 }
                             }
@@ -2665,11 +2796,11 @@ fun ModelRunScreen(
                         AnimatedVisibility(
                             visible = croppedBitmap != null && !isInpaintMode,
                             enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
+                            exit = fadeOut() + shrinkHorizontally(),
                         ) {
                             Row {
                                 Spacer(modifier = Modifier.width(12.dp))
-                                FilledTonalIconButton(
+                                SmallFloatingActionButton(
                                     onClick = {
                                         if (croppedBitmap != null) {
                                             showInpaintScreen = true
@@ -2677,12 +2808,10 @@ fun ModelRunScreen(
                                             Toast.makeText(
                                                 context,
                                                 "Please Crop First",
-                                                Toast.LENGTH_SHORT
+                                                Toast.LENGTH_SHORT,
                                             ).show()
                                         }
                                     },
-                                    shape = CircleShape,
-                                    modifier = Modifier.size(40.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Brush,
@@ -2695,31 +2824,30 @@ fun ModelRunScreen(
                         AnimatedVisibility(
                             visible = isInpaintMode && maskBitmap != null,
                             enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
+                            exit = fadeOut() + shrinkHorizontally(),
                         ) {
                             Row {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Card(
-                                    modifier = Modifier
-                                        .size(100.dp)
-                                        .clickable {
-                                            if (croppedBitmap != null && maskBitmap != null) {
-                                                showInpaintScreen = true
-                                            }
-                                        },
+                                    onClick = {
+                                        if (croppedBitmap != null && maskBitmap != null) {
+                                            showInpaintScreen = true
+                                        }
+                                    },
+                                    modifier = Modifier.size(100.dp),
                                     shape = MaterialTheme.shapes.small,
                                 ) {
                                     Box {
                                         maskBitmap?.let { mb ->
                                             AsyncImage(
                                                 model = ImageRequest.Builder(
-                                                    LocalContext.current
+                                                    LocalContext.current,
                                                 )
                                                     .data(mb)
                                                     .crossfade(true)
                                                     .build(),
                                                 contentDescription = "Mask Image",
-                                                modifier = Modifier.fillMaxSize()
+                                                modifier = Modifier.fillMaxSize(),
                                             )
                                         }
                                         IconButton(
@@ -2732,16 +2860,16 @@ fun ModelRunScreen(
                                                 .size(24.dp)
                                                 .background(
                                                     color = MaterialTheme.colorScheme.surface.copy(
-                                                        alpha = 0.7f
+                                                        alpha = 0.7f,
                                                     ),
-                                                    shape = CircleShape
+                                                    shape = CircleShape,
                                                 )
-                                                .align(Alignment.TopEnd)
+                                                .align(Alignment.TopEnd),
                                         ) {
                                             Icon(
                                                 Icons.Default.Clear,
                                                 contentDescription = "Clear Mask",
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(16.dp),
                                             )
                                         }
                                     }
@@ -2762,21 +2890,21 @@ fun ModelRunScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Crossfade(
                 targetState = currentBitmap != null,
-                label = "result_crossfade"
+                label = "result_crossfade",
             ) { hasResult ->
                 if (!hasResult) {
                     ElevatedCard(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp),
                     ) {
                         Column(
                             modifier = Modifier
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             val iconScale = remember { Animatable(1f) }
                             LaunchedEffect(Unit) {
@@ -2784,8 +2912,8 @@ fun ModelRunScreen(
                                     targetValue = 1.1f,
                                     animationSpec = infiniteRepeatable(
                                         animation = tween(1500),
-                                        repeatMode = RepeatMode.Reverse
-                                    )
+                                        repeatMode = RepeatMode.Reverse,
+                                    ),
                                 )
                             }
                             Icon(
@@ -2795,19 +2923,19 @@ fun ModelRunScreen(
                                     .size(48.dp)
                                     .graphicsLayer(
                                         scaleX = iconScale.value,
-                                        scaleY = iconScale.value
+                                        scaleY = iconScale.value,
                                     ),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
                                 stringResource(R.string.no_results),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 stringResource(R.string.no_results_hint),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Button(
                                 onClick = {
@@ -2815,7 +2943,7 @@ fun ModelRunScreen(
                                         pagerState.animateScrollToPage(0)
                                     }
                                 },
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier.padding(top = 8.dp),
                             ) {
                                 Text(stringResource(R.string.go_to_generate))
                             }
@@ -2824,46 +2952,46 @@ fun ModelRunScreen(
                 } else {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     stringResource(R.string.result_tab),
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
                                 )
                                 currentBitmap?.let { bitmap ->
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(
-                                            8.dp
-                                        )
+                                            8.dp,
+                                        ),
                                     ) {
                                         if (BuildConfig.FLAVOR == "filter") {
                                             FilledTonalIconButton(
                                                 onClick = {
                                                     showReportDialog = true
-                                                }
+                                                },
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Report,
-                                                    contentDescription = "report inappropriate content"
+                                                    contentDescription = "report inappropriate content",
                                                 )
                                             }
                                         }
 
                                         // Upscaler button - only show for NPU runtime and resolution <= 1024
-                                        if (!model?.runOnCpu!! && generationParams?.let {
+                                        if (!model?.runOnCpu!! &&
+                                            generationParams?.let {
                                                 maxOf(
                                                     it.width,
-                                                    it.height
+                                                    it.height,
                                                 ) <= 1024
                                             } == true
                                         ) {
@@ -2871,11 +2999,11 @@ fun ModelRunScreen(
                                                 onClick = {
                                                     showUpscalerDialog = true
                                                 },
-                                                enabled = !isRunning && !isUpscaling
+                                                enabled = !isRunning && !isUpscaling,
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.AutoFixHigh,
-                                                    contentDescription = "upscale image"
+                                                    contentDescription = "upscale image",
                                                 )
                                             }
                                         }
@@ -2888,23 +3016,23 @@ fun ModelRunScreen(
                                                     onSuccess = {
                                                         Toast.makeText(
                                                             context,
-                                                            context.getString(R.string.image_saved),
-                                                            Toast.LENGTH_SHORT
+                                                            msgImageSaved,
+                                                            Toast.LENGTH_SHORT,
                                                         ).show()
                                                     },
                                                     onError = { error ->
                                                         Toast.makeText(
                                                             context,
                                                             error,
-                                                            Toast.LENGTH_SHORT
+                                                            Toast.LENGTH_SHORT,
                                                         ).show()
-                                                    }
+                                                    },
                                                 )
-                                            }
+                                            },
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Save,
-                                                contentDescription = "save image"
+                                                contentDescription = "save image",
                                             )
                                         }
                                     }
@@ -2912,36 +3040,36 @@ fun ModelRunScreen(
                             }
 
                             AnimatedContent(
-                                targetState = imageVersion,
+                                targetState = imageVersion to currentBitmap,
                                 transitionSpec = {
-                                    fadeIn(animationSpec = tween(400)) togetherWith
-                                            fadeOut(animationSpec = tween(400))
+                                    fadeIn(animationSpec = Motion.Fade) togetherWith
+                                        fadeOut(animationSpec = Motion.FadeOut)
                                 },
-                                label = "ImagePreviewCrossfade"
-                            ) { version ->
+                                label = "ImagePreviewCrossfade",
+                            ) { (_, bitmap) ->
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
                                         .clickable {
-                                            if (currentBitmap != null) {
+                                            if (bitmap != null) {
                                                 isPreviewMode = true
                                             }
                                         },
                                     shape = MaterialTheme.shapes.medium,
-                                    shadowElevation = 4.dp
+                                    shadowElevation = 4.dp,
                                 ) {
-                                    currentBitmap?.let { bitmap ->
+                                    bitmap?.let {
                                         AsyncImage(
                                             model = ImageRequest.Builder(
-                                                LocalContext.current
+                                                LocalContext.current,
                                             )
-                                                .data(bitmap)
+                                                .data(it)
                                                 .size(coil.size.Size.ORIGINAL)
                                                 .crossfade(true)
                                                 .build(),
                                             contentDescription = "generated image",
-                                            modifier = Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize(),
                                         )
                                     }
                                 }
@@ -2953,39 +3081,37 @@ fun ModelRunScreen(
                                         .fillMaxWidth()
                                         .padding(top = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(
-                                        8.dp
-                                    )
+                                        8.dp,
+                                    ),
                                 ) {
                                     items(historyItems.take(20).size) { idx ->
                                         val item = historyItems[idx]
                                         Card(
-                                            modifier = Modifier
-                                                .size(72.dp)
-                                                .clickable {
-                                                    // Load bitmap from file
-                                                    val bitmap =
-                                                        BitmapFactory.decodeFile(
-                                                            item.imageFile.absolutePath
-                                                        )
-                                                    if (bitmap != null) {
-                                                        currentBitmap = bitmap
-                                                        generationParams = item.params
-                                                        generationParamsModelId = item.modelId
-                                                        currentDisplayedHistoryId = item.id
-                                                        imageVersion++
-                                                    }
-                                                },
-                                            shape = MaterialTheme.shapes.small
+                                            onClick = {
+                                                val bitmap =
+                                                    BitmapFactory.decodeFile(
+                                                        item.imageFile.absolutePath,
+                                                    )
+                                                if (bitmap != null) {
+                                                    currentBitmap = bitmap
+                                                    generationParams = item.params
+                                                    generationParamsModelId = item.modelId
+                                                    currentDisplayedHistoryId = item.id
+                                                    imageVersion++
+                                                }
+                                            },
+                                            modifier = Modifier.size(72.dp),
+                                            shape = MaterialTheme.shapes.small,
                                         ) {
                                             AsyncImage(
                                                 model = ImageRequest.Builder(
-                                                    LocalContext.current
+                                                    LocalContext.current,
                                                 )
                                                     .data(item.imageFile)
                                                     .size(72)
                                                     .build(),
                                                 contentDescription = "thumb",
-                                                modifier = Modifier.fillMaxSize()
+                                                modifier = Modifier.fillMaxSize(),
                                             )
                                         }
                                     }
@@ -2993,31 +3119,30 @@ fun ModelRunScreen(
                             }
 
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showParametersDialog = true },
+                                onClick = { showParametersDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                ),
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
                                             stringResource(R.string.generation_params),
                                             style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         Icon(
                                             Icons.Default.Info,
                                             contentDescription = "view details",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
 
@@ -3027,12 +3152,10 @@ fun ModelRunScreen(
                                                 R.string.result_params,
                                                 params.steps,
                                                 params.cfg,
-                                                params.seed.toString()
+                                                params.seed.toString(),
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.8f
-                                            )
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Text(
                                             stringResource(
@@ -3043,12 +3166,12 @@ fun ModelRunScreen(
                                                     ?: "unknown",
                                                 if (params.runOnCpu) {
                                                     if (params.useOpenCL) "GPU" else "CPU"
-                                                } else "NPU"
+                                                } else {
+                                                    "NPU"
+                                                },
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.8f
-                                            )
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -3066,7 +3189,7 @@ fun ModelRunScreen(
 //                                                Text("Report this image?")
                             Text(
                                 "Report this image if you feel it is inappropriate. Params and image will be sent to the server for review.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     },
@@ -3077,7 +3200,6 @@ fun ModelRunScreen(
                                 coroutineScope.launch {
                                     currentBitmap?.let { bitmap ->
                                         reportImage(
-                                            context = context,
                                             bitmap = bitmap,
                                             modelName = model?.name ?: "",
                                             params = generationParams!!,
@@ -3085,23 +3207,23 @@ fun ModelRunScreen(
                                                 Toast.makeText(
                                                     context,
                                                     "Thanks for your report.",
-                                                    Toast.LENGTH_SHORT
+                                                    Toast.LENGTH_SHORT,
                                                 ).show()
                                             },
                                             onError = { error ->
                                                 Toast.makeText(
                                                     context,
                                                     "Error: $error",
-                                                    Toast.LENGTH_SHORT
+                                                    Toast.LENGTH_SHORT,
                                                 ).show()
-                                            }
+                                            },
                                         )
                                     }
                                 }
                             },
                             colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
                         ) {
                             Text("Report")
                         }
@@ -3110,7 +3232,7 @@ fun ModelRunScreen(
                         TextButton(onClick = { showReportDialog = false }) {
                             Text("Cancel")
                         }
-                    }
+                    },
                 )
             }
             if (showParametersDialog && generationParams != null) {
@@ -3152,6 +3274,7 @@ fun ModelRunScreen(
     @Composable
     fun HistoryPage() {
         // History page
+        val locale = LocalConfiguration.current.locales[0]
         // Handle back button in selection mode
         BackHandler(enabled = isSelectionMode && !isBatchSaving) {
             isSelectionMode = false
@@ -3159,7 +3282,7 @@ fun ModelRunScreen(
         }
 
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             HistoryFilterBar(
                 filter = historyFilter,
@@ -3174,56 +3297,52 @@ fun ModelRunScreen(
             )
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxSize(),
             ) {
                 if (historyItems.isEmpty()) {
                     var emptyVisible by remember { mutableStateOf(false) }
                     LaunchedEffect(Unit) { emptyVisible = true }
                     val emptyAlpha by animateFloatAsState(
                         targetValue = if (emptyVisible) 1f else 0f,
-                        animationSpec = tween(500),
+                        animationSpec = Motion.Fade,
                         label = "emptyAlpha",
                     )
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .alpha(emptyAlpha),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.offset(y = (-60).dp)
+                            modifier = Modifier.offset(y = (-60).dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Image,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 stringResource(R.string.no_history),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 stringResource(R.string.no_history_hint),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                 } else {
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(
-                            2
-                        ),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                            16.dp
-                        ),
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         items(historyItems.size) { index ->
                             val item = historyItems[index]
@@ -3255,12 +3374,12 @@ fun ModelRunScreen(
                                                 selectedItems.clear()
                                                 selectedItems.add(item)
                                             }
-                                        }
+                                        },
                                     ),
                                 shape = MaterialTheme.shapes.medium,
                                 elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 2.dp
-                                )
+                                    defaultElevation = 2.dp,
+                                ),
                             ) {
                                 Box {
                                     AsyncImage(
@@ -3269,7 +3388,7 @@ fun ModelRunScreen(
                                             .crossfade(true)
                                             .build(),
                                         contentDescription = "Generated image",
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
                                     )
 
                                     if (isSelected) {
@@ -3278,9 +3397,9 @@ fun ModelRunScreen(
                                                 .fillMaxSize()
                                                 .background(
                                                     MaterialTheme.colorScheme.primary.copy(
-                                                        alpha = 0.2f
-                                                    )
-                                                )
+                                                        alpha = 0.2f,
+                                                    ),
+                                                ),
                                         )
                                     }
 
@@ -3291,23 +3410,23 @@ fun ModelRunScreen(
                                             topStart = 0.dp,
                                             topEnd = 4.dp,
                                             bottomStart = 12.dp,
-                                            bottomEnd = 0.dp
+                                            bottomEnd = 0.dp,
                                         ),
-                                        color = MaterialTheme.colorScheme.surface.copy(
-                                            alpha = 0.8f
-                                        )
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                                            .copy(alpha = 0.8f),
                                     ) {
                                         Text(
-                                            text = java.text.SimpleDateFormat(
-                                                "MM/dd HH:mm",
-                                                java.util.Locale.getDefault()
-                                            )
-                                                .format(java.util.Date(item.timestamp)),
+                                            text = remember(item.timestamp, locale) {
+                                                java.text.SimpleDateFormat(
+                                                    "MM/dd HH:mm",
+                                                    locale,
+                                                ).format(java.util.Date(item.timestamp))
+                                            },
                                             style = MaterialTheme.typography.labelSmall,
                                             modifier = Modifier.padding(
                                                 horizontal = 6.dp,
-                                                vertical = 3.dp
-                                            )
+                                                vertical = 3.dp,
+                                            ),
                                         )
                                     }
 
@@ -3319,24 +3438,30 @@ fun ModelRunScreen(
                                                 .padding(8.dp)
                                                 .size(24.dp)
                                                 .background(
-                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(
-                                                        alpha = 0.3f
-                                                    ),
-                                                    shape = CircleShape
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)
+                                                    },
+                                                    shape = CircleShape,
                                                 )
                                                 .border(
                                                     width = 2.dp,
-                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
-                                                    shape = CircleShape
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        Color.White
+                                                    },
+                                                    shape = CircleShape,
                                                 ),
-                                            contentAlignment = Alignment.Center
+                                            contentAlignment = Alignment.Center,
                                         ) {
                                             if (isSelected) {
                                                 Icon(
                                                     imageVector = Icons.Default.Check,
                                                     contentDescription = "Selected",
                                                     tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(16.dp),
                                                 )
                                             }
                                         }
@@ -3349,53 +3474,33 @@ fun ModelRunScreen(
 
                 // Floating selection mode bottom bar
                 if (isSelectionMode) {
-                    ElevatedCard(
+                    val visibleItems = historyItems
+                    val isAllSelected =
+                        selectedItems.size == visibleItems.size && visibleItems.all { it in selectedItems }
+                    HorizontalFloatingToolbar(
+                        expanded = true,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .align(Alignment.BottomCenter)
                             .padding(16.dp),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        elevation = CardDefaults.elevatedCardElevation(
-                            defaultElevation = 6.dp
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        leadingContent = {
                             IconButton(
                                 onClick = {
                                     isSelectionMode = false
                                     selectedItems.clear()
                                 },
-                                enabled = !isBatchSaving
+                                enabled = !isBatchSaving,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Exit selection mode"
+                                    contentDescription = "Exit selection mode",
                                 )
                             }
-
-                            Text(
-                                text = stringResource(
-                                    R.string.selected_items_count,
-                                    selectedItems.size
-                                ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Row {
-                                // Select all / Deselect all button
-                                val visibleCount = historyItems.size
-                                val visibleItems = historyItems
-                                val isAllSelected =
-                                    selectedItems.size == visibleCount && visibleItems.all { it in selectedItems }
+                        },
+                        trailingContent = {
+                            CompositionLocalProvider(
+                                LocalMinimumInteractiveComponentSize provides Dp.Unspecified,
+                            ) {
                                 IconButton(
-                                    modifier = Modifier.size(40.dp),
                                     onClick = {
                                         if (isAllSelected) {
                                             selectedItems.clear()
@@ -3405,55 +3510,55 @@ fun ModelRunScreen(
                                             selectedItems.addAll(visibleItems)
                                         }
                                     },
-                                    enabled = !isBatchSaving
+                                    enabled = !isBatchSaving,
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
                                 ) {
                                     Icon(
-                                        imageVector = if (isAllSelected)
+                                        imageVector = if (isAllSelected) {
                                             Icons.Default.CheckCircle
-                                        else
-                                            Icons.Default.CheckCircleOutline,
+                                        } else {
+                                            Icons.Default.CheckCircleOutline
+                                        },
                                         contentDescription = if (isAllSelected) "Deselect all" else "Select all",
-                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-
-                                // Save button
                                 IconButton(
-                                    modifier = Modifier.size(40.dp),
                                     onClick = { showBatchSaveDialog = true },
-                                    enabled = selectedItems.isNotEmpty() && !isBatchSaving
+                                    enabled = selectedItems.isNotEmpty() && !isBatchSaving,
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = "Save selected",
-                                        tint = if (selectedItems.isNotEmpty() && !isBatchSaving)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = 0.38f
-                                            )
                                     )
                                 }
-
-                                // Delete button
                                 IconButton(
-                                    modifier = Modifier.size(40.dp),
                                     onClick = { showBatchDeleteDialog = true },
-                                    enabled = selectedItems.isNotEmpty() && !isBatchSaving
+                                    enabled = selectedItems.isNotEmpty() && !isBatchSaving,
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Delete,
                                         contentDescription = "Delete selected",
-                                        tint = if (selectedItems.isNotEmpty() && !isBatchSaving)
-                                            MaterialTheme.colorScheme.error
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = 0.38f
-                                            )
                                     )
                                 }
                             }
-                        }
+                        },
+                    ) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.selected_items_count,
+                                selectedItems.size,
+                                selectedItems.size,
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                     }
                 }
             }
@@ -3465,10 +3570,10 @@ fun ModelRunScreen(
             .fillMaxSize()
             .clickable(
                 interactionSource = interactionSource,
-                indication = null
+                indication = null,
             ) {
                 focusManager.clearFocus()
-            }
+            },
     ) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -3478,11 +3583,20 @@ fun ModelRunScreen(
                         // Hide title when collapsed
                         if (scrollBehavior.state.collapsedFraction < 0.5f) {
                             Column {
-                                Text(model?.name ?: "Running Model")
                                 Text(
-                                    model?.description ?: "",
+                                    text = model?.name ?: "Running Model",
+                                    fontWeight = FontWeight.Normal,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                )
+                                Text(
+                                    text = model?.description ?: "",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 )
                             }
                         }
@@ -3497,80 +3611,57 @@ fun ModelRunScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
+                                contentDescription = stringResource(R.string.back),
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surface
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface,
                     ),
                     scrollBehavior = scrollBehavior,
                     actions = {
                         Row {
-                            TextButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        focusManager.clearFocus()
-                                        pagerState.animateScrollToPage(0)
-                                    }
-                                },
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = if (isFirstPage)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                            ) {
-                                Text(stringResource(R.string.prompt_tab))
-                            }
-                            TextButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        focusManager.clearFocus()
-                                        pagerState.animateScrollToPage(1)
-                                    }
-                                },
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = if (isSecondPage)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                            ) {
-                                Text(stringResource(R.string.result_tab))
-                            }
-                            TextButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        focusManager.clearFocus()
-                                        pagerState.animateScrollToPage(2)
-                                    }
-                                },
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = if (pagerState.currentPage == 2)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                            ) {
-                                Text(stringResource(R.string.history_tab))
+                            val tabs = listOf(
+                                stringResource(R.string.prompt_tab),
+                                stringResource(R.string.result_tab),
+                                stringResource(R.string.history_tab),
+                            )
+                            tabs.forEachIndexed { index, label ->
+                                val selected = pagerState.currentPage == index
+                                TextButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            focusManager.clearFocus()
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    ),
+                                ) {
+                                    Text(label)
+                                }
                             }
                         }
-                    }
+                    },
                 )
-            }
+            },
         ) { paddingValues ->
             if (model != null) {
-
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(paddingValues),
                 ) { page ->
                     when (page) {
                         0 -> PromptPage()
-
                         1 -> ResultPage()
-
                         2 -> HistoryPage()
                     }
                 }
@@ -3592,7 +3683,7 @@ fun ModelRunScreen(
                     imageUriForCrop = null
                     selectedImageUri = null
                     hasOriginalImageForStitch = false
-                }
+                },
             )
         }
         if (showInpaintScreen && croppedBitmap != null) {
@@ -3605,7 +3696,7 @@ fun ModelRunScreen(
                 },
                 onCancel = {
                     showInpaintScreen = false
-                }
+                },
             )
         }
     }
@@ -3643,7 +3734,7 @@ fun ModelRunScreen(
                         downloadProgress = DownloadProgress(
                             progress = state.progress,
                             downloadedBytes = state.downloadedBytes,
-                            totalBytes = state.totalBytes
+                            totalBytes = state.totalBytes,
                         )
                     }
                 }
@@ -3654,8 +3745,8 @@ fun ModelRunScreen(
                     downloadProgress = null
                     Toast.makeText(
                         context,
-                        context.getString(R.string.download_done),
-                        Toast.LENGTH_SHORT
+                        msgDownloadDone,
+                        Toast.LENGTH_SHORT,
                     ).show()
                 }
 
@@ -3664,8 +3755,8 @@ fun ModelRunScreen(
                     downloadProgress = null
                     Toast.makeText(
                         context,
-                        context.getString(R.string.error_download_failed, state.message),
-                        Toast.LENGTH_SHORT
+                        msgErrorDownloadFailed.format(state.message),
+                        Toast.LENGTH_SHORT,
                     ).show()
                 }
 
@@ -3712,8 +3803,7 @@ fun ModelRunScreen(
                                 val upscaledBitmap = performUpscale(
                                     context = context,
                                     bitmap = bitmap,
-                                    modelId = modelId,
-                                    upscalerId = selectedUpscaler.id
+                                    upscalerId = selectedUpscaler.id,
                                 )
 
                                 // Save upscaled image via HistoryManager (DB + JPG file)
@@ -3746,7 +3836,7 @@ fun ModelRunScreen(
                                             Log.e(
                                                 "ModelRunScreen",
                                                 "Failed to save upscaled image",
-                                                e
+                                                e,
                                             )
                                         }
                                     }
@@ -3754,11 +3844,8 @@ fun ModelRunScreen(
                             } catch (e: Exception) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(
-                                        R.string.upscale_failed,
-                                        e.message ?: "Unknown error"
-                                    ),
-                                    Toast.LENGTH_SHORT
+                                    msgUpscaleFailed.format(e.message ?: "Unknown error"),
+                                    Toast.LENGTH_SHORT,
                                 ).show()
                             } finally {
                                 isUpscaling = false
@@ -3768,8 +3855,8 @@ fun ModelRunScreen(
                 } else if (selectedUpscaler != null) {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.download_model_first),
-                        Toast.LENGTH_SHORT
+                        msgDownloadModelFirst,
+                        Toast.LENGTH_SHORT,
                     ).show()
                 }
             },
@@ -3777,63 +3864,26 @@ fun ModelRunScreen(
                 downloadingUpscalerId = upscaler.id
                 downloadProgress = null
                 upscaler.startDownload(context)
-            }
+            },
         )
     }
 
-    AnimatedVisibility(
-        visible = isCheckingBackend,
-        enter = fadeIn(),
-        exit = fadeOut()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                CircularProgressIndicator()
-                Text(
-                    stringResource(R.string.loading_model),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
+    BlockingProgressOverlay(visible = isCheckingBackend) {
+        ContainedLoadingIndicator()
+        Text(
+            text = stringResource(R.string.loading_model),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 
-    // Upscaling overlay
-    if (isUpscaling) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                CircularProgressIndicator()
-                Text(
-                    stringResource(R.string.upscaling_image),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
+    BlockingProgressOverlay(visible = isUpscaling) {
+        ContainedLoadingIndicator()
+        Text(
+            text = stringResource(R.string.upscaling_image),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 
     if (showHistoryFilterSheet) {
@@ -3884,7 +3934,7 @@ fun ModelRunScreen(
                                     onSuccess = {
                                         Toast.makeText(
                                             context,
-                                            context.getString(R.string.image_saved),
+                                            msgImageSaved,
                                             Toast.LENGTH_SHORT,
                                         ).show()
                                     },
@@ -4013,7 +4063,7 @@ fun ModelRunScreen(
                     onClick = {
                         scope.launch {
                             val success = historyManager.deleteHistoryItem(
-                                item = selectedHistoryItem!!
+                                item = selectedHistoryItem!!,
                             )
                             if (success) {
                                 showDeleteHistoryDialog = false
@@ -4021,22 +4071,22 @@ fun ModelRunScreen(
                                 selectedHistoryItem = null
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.deleted),
-                                    Toast.LENGTH_SHORT
+                                    msgDeleted,
+                                    Toast.LENGTH_SHORT,
                                 ).show()
                             } else {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.delete_failed_message),
-                                    Toast.LENGTH_SHORT
+                                    msgDeleteFailedMessage,
+                                    Toast.LENGTH_SHORT,
                                 ).show()
                             }
                         }
-                    }
+                    },
                 ) {
                     Text(
                         stringResource(R.string.delete),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
@@ -4044,7 +4094,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showDeleteHistoryDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -4054,7 +4104,13 @@ fun ModelRunScreen(
             onDismissRequest = { showBatchSaveDialog = false },
             title = { Text(stringResource(R.string.batch_save)) },
             text = {
-                Text(stringResource(R.string.batch_save_confirm, selectedItems.size))
+                Text(
+                    pluralStringResource(
+                        R.plurals.batch_save_confirm,
+                        selectedItems.size,
+                        selectedItems.size,
+                    ),
+                )
             },
             confirmButton = {
                 TextButton(
@@ -4069,20 +4125,13 @@ fun ModelRunScreen(
                         scope.launch(Dispatchers.IO) {
                             items.forEach { item ->
                                 var success = false
-                                try {
-                                    val bmp = BitmapFactory.decodeFile(
-                                        item.imageFile.absolutePath
+                                if (item.imageFile.exists()) {
+                                    saveImageFromFile(
+                                        context = context,
+                                        sourceFile = item.imageFile,
+                                        onSuccess = { success = true },
+                                        onError = { },
                                     )
-                                    if (bmp != null) {
-                                        saveImage(
-                                            context = context,
-                                            bitmap = bmp,
-                                            onSuccess = { success = true },
-                                            onError = { }
-                                        )
-                                    }
-                                } catch (_: Exception) {
-                                    // counted as failure
                                 }
                                 withContext(Dispatchers.Main) {
                                     batchSaveCurrent += 1
@@ -4094,25 +4143,25 @@ fun ModelRunScreen(
                                 val failed = batchSaveFailed
                                 val saved = total - failed
                                 val message = if (failed == 0) {
-                                    context.getString(R.string.saved_count, saved)
-                                } else {
-                                    context.getString(
-                                        R.string.saved_count_with_failed,
+                                    resources.getQuantityString(
+                                        R.plurals.saved_count,
                                         saved,
-                                        failed
+                                        saved,
                                     )
+                                } else {
+                                    msgSavedCountWithFailed.format(saved, failed)
                                 }
                                 Toast.makeText(
                                     context,
                                     message,
-                                    Toast.LENGTH_SHORT
+                                    Toast.LENGTH_SHORT,
                                 ).show()
                                 isBatchSaving = false
                                 selectedItems.clear()
                                 isSelectionMode = false
                             }
                         }
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.yes))
                 }
@@ -4121,7 +4170,7 @@ fun ModelRunScreen(
                 TextButton(onClick = { showBatchSaveDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -4129,33 +4178,36 @@ fun ModelRunScreen(
     if (isBatchSaving) {
         AlertDialog(
             onDismissRequest = { /* not dismissable */ },
-            properties = androidx.compose.ui.window.DialogProperties(
+            properties = DialogProperties(
                 dismissOnBackPress = false,
-                dismissOnClickOutside = false
+                dismissOnClickOutside = false,
             ),
             title = { Text(stringResource(R.string.batch_save)) },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         stringResource(
                             R.string.batch_saving_progress,
                             batchSaveCurrent,
-                            batchSaveTotal
+                            batchSaveTotal,
                         ),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
-                    val saveProgress = if (batchSaveTotal > 0)
-                        batchSaveCurrent.toFloat() / batchSaveTotal else 0f
-                    LinearProgressIndicator(
+                    val saveProgress = if (batchSaveTotal > 0) {
+                        batchSaveCurrent.toFloat() / batchSaveTotal
+                    } else {
+                        0f
+                    }
+                    SmoothLinearWavyProgressIndicator(
                         progress = saveProgress,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             },
-            confirmButton = {}
+            confirmButton = {},
         )
     }
 
@@ -4164,7 +4216,15 @@ fun ModelRunScreen(
         AlertDialog(
             onDismissRequest = { showBatchDeleteDialog = false },
             title = { Text(stringResource(R.string.batch_delete)) },
-            text = { Text(stringResource(R.string.batch_delete_confirm, selectedItems.size)) },
+            text = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.batch_delete_confirm,
+                        selectedItems.size,
+                        selectedItems.size,
+                    ),
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -4175,7 +4235,7 @@ fun ModelRunScreen(
 
                             itemsToDelete.forEach { item ->
                                 val success = historyManager.deleteHistoryItem(
-                                    item = item
+                                    item = item,
                                 )
                                 if (success) {
                                     successCount++
@@ -4189,25 +4249,25 @@ fun ModelRunScreen(
                             showBatchDeleteDialog = false
 
                             val message = if (failCount == 0) {
-                                context.getString(R.string.deleted_count, successCount)
-                            } else {
-                                context.getString(
-                                    R.string.deleted_count_with_failed,
+                                resources.getQuantityString(
+                                    R.plurals.deleted_count,
                                     successCount,
-                                    failCount
+                                    successCount,
                                 )
+                            } else {
+                                msgDeletedCountWithFailed.format(successCount, failCount)
                             }
                             Toast.makeText(
                                 context,
                                 message,
-                                Toast.LENGTH_SHORT
+                                Toast.LENGTH_SHORT,
                             ).show()
                         }
-                    }
+                    },
                 ) {
                     Text(
                         stringResource(R.string.delete),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
@@ -4215,15 +4275,15 @@ fun ModelRunScreen(
                 TextButton(onClick = { showBatchDeleteDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
     // Detect shared params on the clipboard once the model is ready.
     LaunchedEffect(backendState, hasInitialized) {
-        if (!clipboardImportChecked
-            && hasInitialized
-            && backendState is BackendService.BackendState.Running
+        if (!clipboardImportChecked &&
+            hasInitialized &&
+            backendState is BackendService.BackendState.Running
         ) {
             clipboardImportChecked = true
             val clipboard =
@@ -4247,8 +4307,8 @@ fun ModelRunScreen(
             list += ParamShareField.CFG
             if (source.seed != null) list += ParamShareField.SEED
             list += ParamShareField.SCHEDULER
-            if (source.mode != GenerationMode.UNKNOWN
-                && source.mode != GenerationMode.TXT2IMG
+            if (source.mode != GenerationMode.UNKNOWN &&
+                source.mode != GenerationMode.TXT2IMG
             ) {
                 list += ParamShareField.DENOISE_STRENGTH
             }
@@ -4259,10 +4319,15 @@ fun ModelRunScreen(
             fieldPreview = { field ->
                 when (field) {
                     ParamShareField.PROMPT -> source.prompt
+
                     ParamShareField.NEGATIVE_PROMPT -> source.negativePrompt
+
                     ParamShareField.STEPS -> source.steps.toString()
+
                     ParamShareField.CFG -> "%.1f".format(source.cfg)
+
                     ParamShareField.SEED -> source.seed?.toString()
+
                     ParamShareField.SCHEDULER -> when (source.scheduler) {
                         "dpm" -> "DPM++ 2M"
                         "dpm_karras" -> "DPM++ 2M Karras"
@@ -4292,21 +4357,21 @@ fun ModelRunScreen(
                 val clipboard =
                     context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 clipboard?.setPrimaryClip(
-                    ClipData.newPlainText("Local Dream params", payload)
+                    ClipData.newPlainText("Local Dream params", payload),
                 )
                 clipboardImportChecked = true
                 shareSourceParams = null
                 shareSourceModelId = null
                 Toast.makeText(
                     context,
-                    context.getString(R.string.share_copied),
-                    Toast.LENGTH_SHORT
+                    msgShareCopied,
+                    Toast.LENGTH_SHORT,
                 ).show()
             },
             onDismiss = {
                 shareSourceParams = null
                 shareSourceModelId = null
-            }
+            },
         )
     }
 
@@ -4315,13 +4380,11 @@ fun ModelRunScreen(
         val clearClipboardAction = {
             val clipboard =
                 context.getSystemService(Context.CLIPBOARD_SERVICE)
-                        as? ClipboardManager
+                    as? ClipboardManager
             runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    clipboard?.clearPrimaryClip()
-                } else {
-                    clipboard?.setPrimaryClip(ClipData.newPlainText("", ""))
-                }
+                // Build.VERSION_CODES.P is API 28, minSdk = 28, so the legacy
+                // setPrimaryClip(empty) fallback is unreachable.
+                clipboard?.clearPrimaryClip()
             }
         }
         ImportParametersDialog(
@@ -4370,8 +4433,8 @@ fun ModelRunScreen(
                 pendingImport = null
                 Toast.makeText(
                     context,
-                    context.getString(R.string.import_applied),
-                    Toast.LENGTH_SHORT
+                    msgImportApplied,
+                    Toast.LENGTH_SHORT,
                 ).show()
             },
             onDismiss = { clearClipboard ->
@@ -4379,7 +4442,7 @@ fun ModelRunScreen(
                     clearClipboardAction()
                 }
                 pendingImport = null
-            }
+            },
         )
     }
 }
@@ -4393,14 +4456,14 @@ fun UpscalerSelectDialog(
     onDismiss: () -> Unit,
     onSelectUpscaler: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDownload: (UpscalerModel) -> Unit
+    onDownload: (UpscalerModel) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.select_upscaler_model)) },
         text = {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(upscalers) { upscaler ->
                     UpscalerModelCard(
@@ -4409,7 +4472,7 @@ fun UpscalerSelectDialog(
                         isDownloading = upscaler.id == downloadingUpscalerId,
                         downloadProgress = if (upscaler.id == downloadingUpscalerId) downloadProgress else null,
                         onSelect = { onSelectUpscaler(upscaler.id) },
-                        onDownload = { onDownload(upscaler) }
+                        onDownload = { onDownload(upscaler) },
                     )
                 }
             }
@@ -4421,15 +4484,16 @@ fun UpscalerSelectDialog(
                 }
                 Button(
                     onClick = onConfirm,
-                    enabled = selectedUpscalerId != null
+                    enabled = selectedUpscalerId != null,
                 ) {
                     Text(stringResource(R.string.confirm))
                 }
             }
-        }
+        },
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun UpscalerModelCard(
     upscaler: UpscalerModel,
@@ -4437,24 +4501,23 @@ fun UpscalerModelCard(
     isDownloading: Boolean,
     downloadProgress: DownloadProgress?,
     onSelect: () -> Unit,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() },
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surface
-            }
+            },
         ),
         border = if (isSelected) {
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         } else {
             null
-        }
+        },
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -4462,32 +4525,31 @@ fun UpscalerModelCard(
                     .fillMaxWidth()
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = upscaler.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = upscaler.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 if (isDownloading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 } else if (!upscaler.isDownloaded) {
                     FilledTonalButton(onClick = onDownload) {
                         Icon(
                             imageVector = Icons.Default.Download,
                             contentDescription = stringResource(R.string.download),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringResource(R.string.download))
@@ -4496,19 +4558,19 @@ fun UpscalerModelCard(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "selected",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
 
             // Show progress bar when downloading
             if (isDownloading && downloadProgress != null) {
-                LinearProgressIndicator(
+                SmoothLinearWavyProgressIndicator(
                     progress = downloadProgress.progress,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 16.dp),
                 )
             }
         }

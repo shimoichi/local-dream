@@ -8,7 +8,8 @@ enum class GenerationMode {
     TXT2IMG,
     IMG2IMG,
     INPAINT,
-    UNKNOWN;
+    UNKNOWN,
+    ;
 
     companion object {
         fun fromString(s: String?): GenerationMode = when (s) {

@@ -1,15 +1,9 @@
 package io.github.xororz.localdream.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.edit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
@@ -19,6 +13,13 @@ import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
 import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class TagAutocompleteRepository private constructor(private val context: Context) {
     private val loadMutex = Mutex()
@@ -60,54 +61,52 @@ class TagAutocompleteRepository private constructor(private val context: Context
         }
     }
 
-    suspend fun importMainCsv(uri: Uri, displayName: String?): ImportResult =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val lineCount = copyUriToFile(uri, mainFile) { cells ->
-                    cells.getOrNull(0)?.trim()?.removePrefix("﻿").isNullOrEmpty().not()
-                }
-                if (lineCount == 0) {
-                    mainFile.delete()
-                    return@withContext ImportResult.Error("empty")
-                }
-                invalidate()
-                prefs.edit {
-                    putString(KEY_MAIN_NAME, displayName ?: MAIN_FILE_NAME)
-                    putInt(KEY_MAIN_LINES, lineCount)
-                }
-                _state.value = readStateFromDisk()
-                ImportResult.Success(lineCount)
-            }.getOrElse {
+    suspend fun importMainCsv(uri: Uri, displayName: String?): ImportResult = withContext(Dispatchers.IO) {
+        runCatching {
+            val lineCount = copyUriToFile(uri, mainFile) { cells ->
+                cells.getOrNull(0)?.trim()?.removePrefix("\uFEFF").isNullOrEmpty().not()
+            }
+            if (lineCount == 0) {
                 mainFile.delete()
-                ImportResult.Error(it.message ?: "unknown")
+                return@withContext ImportResult.Error("empty")
             }
+            invalidate()
+            prefs.edit {
+                putString(KEY_MAIN_NAME, displayName ?: MAIN_FILE_NAME)
+                putInt(KEY_MAIN_LINES, lineCount)
+            }
+            _state.value = readStateFromDisk()
+            ImportResult.Success(lineCount)
+        }.getOrElse {
+            mainFile.delete()
+            ImportResult.Error(it.message ?: "unknown")
         }
+    }
 
-    suspend fun importTranslationCsv(uri: Uri, displayName: String?): ImportResult =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val lineCount = copyUriToFile(uri, translationFile) { cells ->
-                    if (cells.size < 2) return@copyUriToFile false
-                    val key = cells[0].trim().removePrefix("﻿")
-                    if (key.isEmpty()) return@copyUriToFile false
-                    extractTranslation(cells) != null
-                }
-                if (lineCount == 0) {
-                    translationFile.delete()
-                    return@withContext ImportResult.Error("empty")
-                }
-                invalidate()
-                prefs.edit {
-                    putString(KEY_TRANSLATION_NAME, displayName ?: TRANSLATION_FILE_NAME)
-                    putInt(KEY_TRANSLATION_LINES, lineCount)
-                }
-                _state.value = readStateFromDisk()
-                ImportResult.Success(lineCount)
-            }.getOrElse {
-                translationFile.delete()
-                ImportResult.Error(it.message ?: "unknown")
+    suspend fun importTranslationCsv(uri: Uri, displayName: String?): ImportResult = withContext(Dispatchers.IO) {
+        runCatching {
+            val lineCount = copyUriToFile(uri, translationFile) { cells ->
+                if (cells.size < 2) return@copyUriToFile false
+                val key = cells[0].trim().removePrefix("\uFEFF")
+                if (key.isEmpty()) return@copyUriToFile false
+                extractTranslation(cells) != null
             }
+            if (lineCount == 0) {
+                translationFile.delete()
+                return@withContext ImportResult.Error("empty")
+            }
+            invalidate()
+            prefs.edit {
+                putString(KEY_TRANSLATION_NAME, displayName ?: TRANSLATION_FILE_NAME)
+                putInt(KEY_TRANSLATION_LINES, lineCount)
+            }
+            _state.value = readStateFromDisk()
+            ImportResult.Success(lineCount)
+        }.getOrElse {
+            translationFile.delete()
+            ImportResult.Error(it.message ?: "unknown")
         }
+    }
 
     fun clearMainCsv() {
         mainFile.delete()
@@ -142,14 +141,22 @@ class TagAutocompleteRepository private constructor(private val context: Context
             mainFileName = if (mainImported) prefs.getString(KEY_MAIN_NAME, null) else null,
             mainEntryCount = if (mainImported) prefs.getInt(KEY_MAIN_LINES, 0) else 0,
             translationImported = translationImported,
-            translationFileName = if (translationImported) prefs.getString(
-                KEY_TRANSLATION_NAME,
+            translationFileName = if (translationImported) {
+                prefs.getString(
+                    KEY_TRANSLATION_NAME,
+                    null,
+                )
+            } else {
                 null
-            ) else null,
-            translationEntryCount = if (translationImported) prefs.getInt(
-                KEY_TRANSLATION_LINES,
+            },
+            translationEntryCount = if (translationImported) {
+                prefs.getInt(
+                    KEY_TRANSLATION_LINES,
+                    0,
+                )
+            } else {
                 0
-            ) else 0
+            },
         )
     }
 
@@ -189,7 +196,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                     val cells = parseCsvLine(line)
                     if (cells.isEmpty()) return@forEach
 
-                    val english = cells.getOrNull(0)?.trim()?.removePrefix("﻿").orEmpty()
+                    val english = cells.getOrNull(0)?.trim()?.removePrefix("\uFEFF").orEmpty()
                     if (english.isEmpty()) return@forEach
                     if (!englishSet.add(english)) return@forEach
 
@@ -211,7 +218,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                         normalizedEnglish = normalizeQuery(english),
                         normalizedAliases = aliases.map(::normalizeQuery)
                             .filter { it.isNotEmpty() },
-                        normalizedTranslation = translation?.let(::normalizeTranslation)
+                        normalizedTranslation = translation?.let(::normalizeTranslation),
                     )
                 }
             }
@@ -246,7 +253,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
             englishByHead = englishByHead,
             aliasByHead = aliasByHead,
             translationEntries = translationEntries,
-            translationByHead = translationByHead
+            translationByHead = translationByHead,
         )
     }
 
@@ -260,7 +267,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                     if (line.isEmpty()) return@forEach
                     val cells = parseCsvLine(line)
                     if (cells.size < 2) return@forEach
-                    val english = cells[0].trim().removePrefix("﻿")
+                    val english = cells[0].trim().removePrefix("\uFEFF")
                     if (english.isEmpty()) return@forEach
                     val translation = extractTranslation(cells) ?: return@forEach
                     map[english] = translation
@@ -303,16 +310,24 @@ class TagAutocompleteRepository private constructor(private val context: Context
                     val postCount = input.readInt()
                     val aliasCount = input.readInt()
                     val aliases =
-                        if (aliasCount == 0) emptyList() else ArrayList<String>(aliasCount).also {
-                            repeat(aliasCount) { _ -> it += input.readUTF() }
+                        if (aliasCount == 0) {
+                            emptyList()
+                        } else {
+                            ArrayList<String>(aliasCount).also {
+                                repeat(aliasCount) { _ -> it += input.readUTF() }
+                            }
                         }
                     val normalizedEnglish = input.readUTF()
                     val normalizedAliasCount = input.readInt()
                     val normalizedAliases =
-                        if (normalizedAliasCount == 0) emptyList() else ArrayList<String>(
-                            normalizedAliasCount
-                        ).also {
-                            repeat(normalizedAliasCount) { _ -> it += input.readUTF() }
+                        if (normalizedAliasCount == 0) {
+                            emptyList()
+                        } else {
+                            ArrayList<String>(
+                                normalizedAliasCount,
+                            ).also {
+                                repeat(normalizedAliasCount) { _ -> it += input.readUTF() }
+                            }
                         }
                     val normalizedTranslation = if (input.readBoolean()) input.readUTF() else null
                     list += TagEntry(
@@ -323,7 +338,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                         aliases = aliases,
                         normalizedEnglish = normalizedEnglish,
                         normalizedAliases = normalizedAliases,
-                        normalizedTranslation = normalizedTranslation
+                        normalizedTranslation = normalizedTranslation,
                     )
                 }
                 list
@@ -376,7 +391,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
 
     private fun extractTranslation(cells: List<String>): String? {
         for (i in 1 until cells.size) {
-            val raw = cells[i].trim().removePrefix("﻿")
+            val raw = cells[i].trim().removePrefix("\uFEFF")
             if (raw.isEmpty()) continue
             if (raw.toIntOrNull() != null) continue
             if (raw.toDoubleOrNull() != null) continue
@@ -385,11 +400,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
         return null
     }
 
-    private fun suggestByTranslation(
-        data: TagData,
-        normalizedQuery: String,
-        limit: Int
-    ): List<TagSuggestion> {
+    private fun suggestByTranslation(data: TagData, normalizedQuery: String, limit: Int): List<TagSuggestion> {
         if (normalizedQuery.isEmpty()) return emptyList()
         val head = normalizedQuery.first()
         val prefix = mutableListOf<TagSuggestion>()
@@ -405,7 +416,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                 matchType = TagMatchType.Translation,
                 category = entry.category,
                 postCount = entry.postCount,
-                score = 5000 + scoreBase - normalized.length
+                score = 5000 + scoreBase - normalized.length,
             )
         }
 
@@ -424,7 +435,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                     matchType = TagMatchType.Translation,
                     category = entry.category,
                     postCount = entry.postCount,
-                    score = 4200 + scoreBase - idx
+                    score = 4200 + scoreBase - idx,
                 )
             }
             collector
@@ -438,11 +449,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
             .take(limit)
     }
 
-    private fun suggestByEnglish(
-        data: TagData,
-        normalizedQuery: String,
-        limit: Int
-    ): List<TagSuggestion> {
+    private fun suggestByEnglish(data: TagData, normalizedQuery: String, limit: Int): List<TagSuggestion> {
         if (normalizedQuery.isEmpty()) return emptyList()
         val head = normalizedQuery.first()
         val prefix = mutableListOf<TagSuggestion>()
@@ -458,7 +465,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
             prefix += buildSuggestion(
                 entry,
                 TagMatchType.Prefix,
-                6000 + scoreBase - entry.normalizedEnglish.length
+                6000 + scoreBase - entry.normalizedEnglish.length,
             )
         }
 
@@ -472,7 +479,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                 ref.entry,
                 TagMatchType.Alias,
                 5200 + scoreBase - ref.alias.length,
-                ref.alias
+                ref.alias,
             )
         }
 
@@ -515,7 +522,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                         entry,
                         TagMatchType.Correction,
                         3600 + scoreBase - bestDistance * 100,
-                        matchedAlias
+                        matchedAlias,
                     )
                 }
             }
@@ -531,7 +538,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
         entry: TagEntry,
         matchType: TagMatchType,
         score: Int,
-        aliasValue: String? = null
+        aliasValue: String? = null,
     ): TagSuggestion {
         val secondary = when (matchType) {
             TagMatchType.Alias -> aliasValue?.replace('_', ' ')
@@ -544,15 +551,11 @@ class TagAutocompleteRepository private constructor(private val context: Context
             matchType = matchType,
             category = entry.category,
             postCount = entry.postCount,
-            score = score
+            score = score,
         )
     }
 
-    private fun copyUriToFile(
-        uri: Uri,
-        target: File,
-        isValidRow: (List<String>) -> Boolean
-    ): Int {
+    private fun copyUriToFile(uri: Uri, target: File, isValidRow: (List<String>) -> Boolean): Int {
         val input: InputStream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalStateException("cannot open uri")
         var validRows = 0
@@ -606,20 +609,16 @@ class TagAutocompleteRepository private constructor(private val context: Context
         return result
     }
 
-    private fun normalizeTranslation(value: String): String =
-        value.trim().replace(" ", "").lowercase()
+    private fun normalizeTranslation(value: String): String = value.trim().replace(" ", "").lowercase()
 
-    private fun normalizeQuery(value: String): String {
-        return value
-            .trim()
-            .lowercase()
-            .replace(' ', '_')
-            .replace('-', '_')
-            .replace(underscoreRegex, "_")
-    }
+    private fun normalizeQuery(value: String): String = value
+        .trim()
+        .lowercase()
+        .replace(' ', '_')
+        .replace('-', '_')
+        .replace(underscoreRegex, "_")
 
-    private fun containsNonAsciiLetter(value: String): Boolean =
-        value.any { it.code > 127 && it.isLetter() }
+    private fun containsNonAsciiLetter(value: String): Boolean = value.any { it.code > 127 && it.isLetter() }
 
     private fun popularityScore(postCount: Int): Int = when {
         postCount >= 1_000_000 -> 300
@@ -653,7 +652,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
                 var value = minOf(
                     dp[i - 1][j] + 1,
                     dp[i][j - 1] + 1,
-                    dp[i - 1][j - 1] + cost
+                    dp[i - 1][j - 1] + cost,
                 )
                 if (i > 1 && j > 1 && source[i - 1] == target[j - 2] && source[i - 2] == target[j - 1]) {
                     value = minOf(value, dp[i - 2][j - 2] + cost)
@@ -672,7 +671,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
         val englishByHead: Map<Char, List<TagEntry>>,
         val aliasByHead: Map<Char, List<AliasRef>>,
         val translationEntries: List<TagEntry>,
-        val translationByHead: Map<Char, List<TagEntry>>
+        val translationByHead: Map<Char, List<TagEntry>>,
     )
 
     private data class AliasRef(val entry: TagEntry, val alias: String)
@@ -690,14 +689,13 @@ class TagAutocompleteRepository private constructor(private val context: Context
         private const val KEY_TRANSLATION_NAME = "translation_csv_name"
         private const val KEY_TRANSLATION_LINES = "translation_csv_lines"
 
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: TagAutocompleteRepository? = null
 
-        fun getInstance(context: Context): TagAutocompleteRepository {
-            return instance ?: synchronized(this) {
-                instance ?: TagAutocompleteRepository(context.applicationContext).also {
-                    instance = it
-                }
+        fun getInstance(context: Context): TagAutocompleteRepository = instance ?: synchronized(this) {
+            instance ?: TagAutocompleteRepository(context.applicationContext).also {
+                instance = it
             }
         }
 
@@ -717,15 +715,11 @@ class TagAutocompleteRepository private constructor(private val context: Context
                 token = token,
                 trimmedStart = trimmedStart,
                 trimmedEnd = selection,
-                segmentEnd = segmentEnd
+                segmentEnd = segmentEnd,
             )
         }
 
-        fun applySuggestion(
-            text: String,
-            selection: Int,
-            suggestion: TagSuggestion
-        ): Pair<String, Int> {
+        fun applySuggestion(text: String, selection: Int, suggestion: TagSuggestion): Pair<String, Int> {
             val context = extractActiveTag(text, selection) ?: return text to selection
             val prefix = text.substring(0, context.trimmedStart)
             val suffix = text.substring(context.segmentEnd)

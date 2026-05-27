@@ -1,31 +1,30 @@
 package io.github.xororz.localdream.data
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.Immutable
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.service.ModelDownloadService
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.io.File
-import android.content.Intent
-import android.util.Log
 
 @Immutable
-data class Resolution(
-    val width: Int,
-    val height: Int
-) {
+data class Resolution(val width: Int, val height: Int) {
     val isSquare: Boolean get() = width == height
 
-    override fun toString(): String =
-        if (isSquare) "${width}×${width}"
-        else "${width}×${height}"
+    override fun toString(): String = if (isSquare) {
+        "$width×$width"
+    } else {
+        "$width×$height"
+    }
 }
 
 object PatchScanner {
@@ -63,20 +62,14 @@ object PatchScanner {
     }
 }
 
-private fun getDeviceSoc(): String {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        Build.SOC_MODEL
-    } else {
-        "CPU"
-    }
+private fun getDeviceSoc(): String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    Build.SOC_MODEL
+} else {
+    "CPU"
 }
 
 @Immutable
-data class DownloadProgress(
-    val progress: Float,
-    val downloadedBytes: Long,
-    val totalBytes: Long
-)
+data class DownloadProgress(val progress: Float, val downloadedBytes: Long, val totalBytes: Long)
 
 val chipsetModelSuffixes = mapOf(
     "SM8475" to "8gen1",
@@ -118,7 +111,7 @@ data class Model(
     val runOnCpu: Boolean = false,
     val useCpuClip: Boolean = false,
     val isCustom: Boolean = false,
-    val isSdxl: Boolean = false
+    val isSdxl: Boolean = false,
 
 ) {
 
@@ -138,29 +131,27 @@ data class Model(
         context.startForegroundService(intent)
     }
 
-    fun deleteModel(context: Context): Boolean {
-        return try {
-            val modelDir = File(getModelsDir(context), id)
-            val historyManager = HistoryManager(context)
-            val generationPreferences = GenerationPreferences(context)
+    fun deleteModel(context: Context): Boolean = try {
+        val modelDir = File(getModelsDir(context), id)
+        val historyManager = HistoryManager(context)
+        val generationPreferences = GenerationPreferences(context)
 
-            runBlocking {
-                historyManager.clearHistoryForModel(id)
-                generationPreferences.clearPreferencesForModel(id)
-            }
+        runBlocking {
+            historyManager.clearHistoryForModel(id)
+            generationPreferences.clearPreferencesForModel(id)
+        }
 
-            if (modelDir.exists() && modelDir.isDirectory) {
-                val deleted = modelDir.deleteRecursively()
-                Log.d("Model", "Delete model $id: $deleted")
-                deleted
-            } else {
-                Log.d("Model", "Model does not exist: $id")
-                false
-            }
-        } catch (e: Exception) {
-            Log.e("Model", "error: ${e.message}")
+        if (modelDir.exists() && modelDir.isDirectory) {
+            val deleted = modelDir.deleteRecursively()
+            Log.d("Model", "Delete model $id: $deleted")
+            deleted
+        } else {
+            Log.d("Model", "Model does not exist: $id")
             false
         }
+    } catch (e: Exception) {
+        Log.e("Model", "error: ${e.message}")
+        false
     }
 
     companion object {
@@ -175,7 +166,7 @@ data class Model(
             val soc = getDeviceSoc().uppercase()
             val prefixes = listOf(
                 "SM", "QCS", "QCM", "CQ", "IPQ", "SXR", "AIC", "SSG",
-                "SC", "SA", "SDM", "MSM", "QRB", "X1E", "X1P"
+                "SC", "SA", "SDM", "MSM", "QRB", "X1E", "X1P",
             )
             return prefixes.any { soc.startsWith(it) }
         }
@@ -190,17 +181,11 @@ data class Model(
             return null
         }
 
-        fun getModelsDir(context: Context): File {
-            return File(context.filesDir, MODELS_DIR).apply {
-                if (!exists()) mkdirs()
-            }
+        fun getModelsDir(context: Context): File = File(context.filesDir, MODELS_DIR).apply {
+            if (!exists()) mkdirs()
         }
 
-        fun isModelDownloaded(
-            context: Context,
-            modelId: String,
-            isCustom: Boolean = false
-        ): Boolean {
+        fun isModelDownloaded(context: Context, modelId: String, isCustom: Boolean = false): Boolean {
             if (isCustom) {
                 return true
             }
@@ -214,11 +199,7 @@ data class Model(
             return files != null && files.isNotEmpty()
         }
 
-        fun needsModelUpgrade(
-            context: Context,
-            modelId: String,
-            isNpu: Boolean
-        ): Boolean {
+        fun needsModelUpgrade(context: Context, modelId: String, isNpu: Boolean): Boolean {
             if (!isNpu) return false
 
             val modelDir = File(getModelsDir(context), modelId)
@@ -237,7 +218,7 @@ data class UpscalerModel(
     val description: String,
     val baseUrl: String,
     val fileUri: String,
-    val isDownloaded: Boolean = false
+    val isDownloaded: Boolean = false,
 ) {
     fun startDownload(context: Context) {
         val intent = Intent(context, ModelDownloadService::class.java).apply {
@@ -280,14 +261,14 @@ class UpscalerRepository(private val context: Context) {
 
         return listOf(
             createAnimeUpscaler(suffix),
-            createRealisticUpscaler(suffix)
+            createRealisticUpscaler(suffix),
         )
     }
 
     private fun createAnimeUpscaler(suffix: String): UpscalerModel {
         val id = "upscaler_anime"
         val fileUri =
-            "xororz/upscaler/resolve/main/realesrgan_x4plus_anime_6b/upscaler_${suffix}.bin"
+            "xororz/upscaler/resolve/main/realesrgan_x4plus_anime_6b/upscaler_$suffix.bin"
 
         val isDownloaded = Model.isModelDownloaded(context, id, false)
 
@@ -297,13 +278,13 @@ class UpscalerRepository(private val context: Context) {
             description = context.getString(R.string.upscaler_anime_desc),
             baseUrl = baseUrl,
             fileUri = fileUri,
-            isDownloaded = isDownloaded
+            isDownloaded = isDownloaded,
         )
     }
 
     private fun createRealisticUpscaler(suffix: String): UpscalerModel {
         val id = "upscaler_realistic"
-        val fileUri = "xororz/upscaler/resolve/main/4x_UltraSharpV2_Lite/upscaler_${suffix}.bin"
+        val fileUri = "xororz/upscaler/resolve/main/4x_UltraSharpV2_Lite/upscaler_$suffix.bin"
 
         val isDownloaded = Model.isModelDownloaded(context, id, false)
 
@@ -313,7 +294,7 @@ class UpscalerRepository(private val context: Context) {
             description = context.getString(R.string.upscaler_realistic_desc),
             baseUrl = baseUrl,
             fileUri = fileUri,
-            isDownloaded = isDownloaded
+            isDownloaded = isDownloaded,
         )
     }
 
@@ -361,7 +342,7 @@ class ModelRepository(private val context: Context) {
                 if (modelId in RESERVED_MODEL_IDS) {
                     Log.w(
                         "ModelRepository",
-                        "skip custom model '$modelId': id conflicts with a built-in model"
+                        "skip custom model '$modelId': id conflicts with a built-in model",
                     )
                     return@forEach
                 }
@@ -386,11 +367,7 @@ class ModelRepository(private val context: Context) {
         return customModels.sortedBy { it.name.lowercase() }
     }
 
-    private fun createCustomModel(
-        modelDir: File,
-        isNpu: Boolean = false,
-        isSdxl: Boolean = false
-    ): Model {
+    private fun createCustomModel(modelDir: File, isNpu: Boolean = false, isSdxl: Boolean = false): Model {
         val modelId = modelDir.name
 
         return Model(
@@ -406,7 +383,7 @@ class ModelRepository(private val context: Context) {
             runOnCpu = !isNpu,
             useCpuClip = true,
             isCustom = true,
-            isSdxl = isSdxl
+            isSdxl = isSdxl,
         )
     }
 
@@ -433,9 +410,7 @@ class ModelRepository(private val context: Context) {
         return customModels + predefinedModels
     }
 
-    private fun isSdxlCapableSoc(soc: String): Boolean {
-        return soc in setOf("SM8750", "SM8750P", "SM8850", "SM8850P", "SM8845", "SM8650")
-    }
+    private fun isSdxlCapableSoc(soc: String): Boolean = soc in setOf("SM8750", "SM8750P", "SM8850", "SM8850P", "SM8845", "SM8650")
 
     private fun createSDXLBaseModel(): Model {
         val id = "sdxl_base"
@@ -456,7 +431,7 @@ class ModelRepository(private val context: Context) {
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry,",
             runOnCpu = false,
             useCpuClip = true,
-            isSdxl = true
+            isSdxl = true,
         )
     }
 
@@ -479,7 +454,7 @@ class ModelRepository(private val context: Context) {
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
             runOnCpu = false,
             useCpuClip = true,
-            isSdxl = true
+            isSdxl = true,
         )
     }
 
@@ -487,7 +462,7 @@ class ModelRepository(private val context: Context) {
         val id = "anythingv5"
         val soc = getDeviceSoc()
         val suffix = Model.getChipsetSuffix(soc) ?: "min"
-        val fileUri = "xororz/sd-qnn/resolve/main/AnythingV5_qnn2.28_${suffix}.zip"
+        val fileUri = "xororz/sd-qnn/resolve/main/AnythingV5_qnn2.28_$suffix.zip"
 
         val isDownloaded = Model.isModelDownloaded(context, id, false)
         val needsUpgrade = Model.needsModelUpgrade(context, id, true)
@@ -504,7 +479,7 @@ class ModelRepository(private val context: Context) {
             defaultPrompt = "masterpiece, best quality, 1girl, solo, cute, white hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
             runOnCpu = false,
-            useCpuClip = true
+            useCpuClip = true,
         )
     }
 
@@ -524,7 +499,7 @@ class ModelRepository(private val context: Context) {
             isDownloaded = isDownloaded,
             defaultPrompt = "masterpiece, best quality, 1girl, solo, cute, white hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
-            runOnCpu = true
+            runOnCpu = true,
         )
     }
 
@@ -532,7 +507,7 @@ class ModelRepository(private val context: Context) {
         val id = "qteamix"
         val soc = getDeviceSoc()
         val suffix = Model.getChipsetSuffix(soc) ?: "min"
-        val fileUri = "xororz/sd-qnn/resolve/main/QteaMix_qnn2.28_${suffix}.zip"
+        val fileUri = "xororz/sd-qnn/resolve/main/QteaMix_qnn2.28_$suffix.zip"
         val isDownloaded = Model.isModelDownloaded(context, id, false)
         val needsUpgrade = Model.needsModelUpgrade(context, id, true)
 
@@ -547,7 +522,7 @@ class ModelRepository(private val context: Context) {
             needsUpgrade = needsUpgrade,
             defaultPrompt = "chibi, best quality, 1girl, solo, cute, pink hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
-            useCpuClip = true
+            useCpuClip = true,
         )
     }
 
@@ -566,7 +541,7 @@ class ModelRepository(private val context: Context) {
             isDownloaded = isDownloaded,
             defaultPrompt = "chibi, best quality, 1girl, solo, cute, pink hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
-            runOnCpu = true
+            runOnCpu = true,
         )
     }
 
@@ -574,7 +549,7 @@ class ModelRepository(private val context: Context) {
         val id = "cuteyukimix"
         val soc = getDeviceSoc()
         val suffix = Model.getChipsetSuffix(soc) ?: "min"
-        val fileUri = "xororz/sd-qnn/resolve/main/CuteYukiMix_qnn2.28_${suffix}.zip"
+        val fileUri = "xororz/sd-qnn/resolve/main/CuteYukiMix_qnn2.28_$suffix.zip"
         val isDownloaded = Model.isModelDownloaded(context, id, false)
         val needsUpgrade = Model.needsModelUpgrade(context, id, true)
 
@@ -589,7 +564,7 @@ class ModelRepository(private val context: Context) {
             needsUpgrade = needsUpgrade,
             defaultPrompt = "masterpiece, best quality, 1girl, solo, cute, white hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
-            useCpuClip = true
+            useCpuClip = true,
         )
     }
 
@@ -608,7 +583,7 @@ class ModelRepository(private val context: Context) {
             isDownloaded = isDownloaded,
             defaultPrompt = "masterpiece, best quality, 1girl, solo, cute, white hair,",
             defaultNegativePrompt = "lowres, bad anatomy, bad hands, missing fingers, extra fingers, bad arms, missing legs, missing arms, poorly drawn face, bad face, fused face, cloned face, three crus, fused feet, fused thigh, extra crus, ugly fingers, horn, realistic photo, huge eyes, worst face, 2girl, long fingers, disconnected limbs,",
-            runOnCpu = true
+            runOnCpu = true,
         )
     }
 
@@ -616,7 +591,7 @@ class ModelRepository(private val context: Context) {
         val id = "absolutereality"
         val soc = getDeviceSoc()
         val suffix = Model.getChipsetSuffix(soc) ?: "min"
-        val fileUri = "xororz/sd-qnn/resolve/main/AbsoluteReality_qnn2.28_${suffix}.zip"
+        val fileUri = "xororz/sd-qnn/resolve/main/AbsoluteReality_qnn2.28_$suffix.zip"
         val isDownloaded = Model.isModelDownloaded(context, id, false)
         val needsUpgrade = Model.needsModelUpgrade(context, id, true)
 
@@ -632,7 +607,7 @@ class ModelRepository(private val context: Context) {
             defaultPrompt = "masterpiece, best quality, ultra-detailed, realistic, 8k, a cat on grass,",
             defaultNegativePrompt = "worst quality, low quality, normal quality, poorly drawn, lowres, low resolution, signature, watermarks, ugly, out of focus, error, blurry, unclear photo, bad photo, unrealistic, semi realistic, pixelated, cartoon, anime, cgi, drawing, 2d, 3d, censored, duplicate,",
             runOnCpu = false,
-            useCpuClip = true
+            useCpuClip = true,
         )
     }
 
@@ -651,7 +626,7 @@ class ModelRepository(private val context: Context) {
             isDownloaded = isDownloaded,
             defaultPrompt = "masterpiece, best quality, ultra-detailed, realistic, 8k, a cat on grass,",
             defaultNegativePrompt = "worst quality, low quality, normal quality, poorly drawn, lowres, low resolution, signature, watermarks, ugly, out of focus, error, blurry, unclear photo, bad photo, unrealistic, semi realistic, pixelated, cartoon, anime, cgi, drawing, 2d, 3d, censored, duplicate,",
-            runOnCpu = true
+            runOnCpu = true,
         )
     }
 
@@ -659,7 +634,7 @@ class ModelRepository(private val context: Context) {
         val id = "chilloutmix"
         val soc = getDeviceSoc()
         val suffix = Model.getChipsetSuffix(soc) ?: "min"
-        val fileUri = "xororz/sd-qnn/resolve/main/ChilloutMix_qnn2.28_${suffix}.zip"
+        val fileUri = "xororz/sd-qnn/resolve/main/ChilloutMix_qnn2.28_$suffix.zip"
         val isDownloaded = Model.isModelDownloaded(context, id, false)
         val needsUpgrade = Model.needsModelUpgrade(context, id, true)
 
@@ -675,7 +650,7 @@ class ModelRepository(private val context: Context) {
             defaultPrompt = "RAW photo, best quality, realistic, photo-realistic, masterpiece, 1girl, upper body, facing front, portrait, white shirt",
             defaultNegativePrompt = "paintings, cartoon, anime, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, skin spots, acnes, skin blemishes",
             runOnCpu = false,
-            useCpuClip = true
+            useCpuClip = true,
         )
     }
 
@@ -694,7 +669,7 @@ class ModelRepository(private val context: Context) {
             isDownloaded = isDownloaded,
             defaultPrompt = "RAW photo, best quality, realistic, photo-realistic, masterpiece, 1girl, upper body, facing front, portrait, white shirt",
             defaultNegativePrompt = "paintings, cartoon, anime, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, skin spots, acnes, skin blemishes",
-            runOnCpu = true
+            runOnCpu = true,
         )
     }
 
@@ -709,7 +684,7 @@ class ModelRepository(private val context: Context) {
                 }
                 model.copy(
                     isDownloaded = isDownloaded,
-                    needsUpgrade = needsUpgrade
+                    needsUpgrade = needsUpgrade,
                 )
             } else {
                 model

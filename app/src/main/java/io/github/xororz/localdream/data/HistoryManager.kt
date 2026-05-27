@@ -7,13 +7,12 @@ import androidx.compose.runtime.Immutable
 import io.github.xororz.localdream.data.db.AppDatabase
 import io.github.xororz.localdream.data.db.HistoryEntity
 import io.github.xororz.localdream.ui.screens.GenerationParameters
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-
 
 @Immutable
 data class HistoryItem(
@@ -101,7 +100,9 @@ class HistoryManager(private val context: Context) {
                 mode = mode.name,
                 denoiseStrength = if (mode == GenerationMode.IMG2IMG || mode == GenerationMode.INPAINT) {
                     params.denoiseStrength
-                } else null,
+                } else {
+                    null
+                },
                 upscalerId = upscalerId,
                 steps = params.steps,
                 cfg = params.cfg,
@@ -121,22 +122,20 @@ class HistoryManager(private val context: Context) {
         }
     }
 
-    suspend fun loadHistoryForModel(modelId: String): List<HistoryItem> =
-        withContext(Dispatchers.IO) {
-            try {
-                val filter = HistoryFilter(modelIds = setOf(modelId))
-                dao.queryOnce(filter.toSqlQuery())
-                    .map { HistoryItem.fromEntity(filesDir, it) }
-            } catch (e: Exception) {
-                Log.e("HistoryManager", "Failed to load history", e)
-                emptyList()
-            }
+    suspend fun loadHistoryForModel(modelId: String): List<HistoryItem> = withContext(Dispatchers.IO) {
+        try {
+            val filter = HistoryFilter(modelIds = setOf(modelId))
+            dao.queryOnce(filter.toSqlQuery())
+                .map { HistoryItem.fromEntity(filesDir, it) }
+        } catch (e: Exception) {
+            Log.e("HistoryManager", "Failed to load history", e)
+            emptyList()
         }
+    }
 
-    fun observe(filter: HistoryFilter): Flow<List<HistoryItem>> =
-        dao.query(filter.toSqlQuery()).map { entities ->
-            entities.map { HistoryItem.fromEntity(filesDir, it) }
-        }
+    fun observe(filter: HistoryFilter): Flow<List<HistoryItem>> = dao.query(filter.toSqlQuery()).map { entities ->
+        entities.map { HistoryItem.fromEntity(filesDir, it) }
+    }
 
     fun observeKnownModelIds(): Flow<List<String>> = dao.observeKnownModelIds()
     fun observeKnownSchedulers(): Flow<List<String>> = dao.observeKnownSchedulers()

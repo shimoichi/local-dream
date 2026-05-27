@@ -5,26 +5,24 @@ import androidx.compose.runtime.Immutable
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "generation_prefs")
 
 class GenerationPreferences(private val context: Context) {
     private fun getPromptKey(modelId: String) = stringPreferencesKey("${modelId}_prompt")
-    private fun getNegativePromptKey(modelId: String) =
-        stringPreferencesKey("${modelId}_negative_prompt")
+    private fun getNegativePromptKey(modelId: String) = stringPreferencesKey("${modelId}_negative_prompt")
 
     private fun getStepsKey(modelId: String) = floatPreferencesKey("${modelId}_steps")
     private fun getCfgKey(modelId: String) = floatPreferencesKey("${modelId}_cfg")
     private fun getSeedKey(modelId: String) = stringPreferencesKey("${modelId}_seed")
     private fun getWidthKey(modelId: String) = intPreferencesKey("${modelId}_width")
     private fun getHeightKey(modelId: String) = intPreferencesKey("${modelId}_height")
-    private fun getDenoiseStrengthKey(modelId: String) =
-        floatPreferencesKey("${modelId}_denoise_strength")
+    private fun getDenoiseStrengthKey(modelId: String) = floatPreferencesKey("${modelId}_denoise_strength")
 
     private fun getUseOpenCLKey(modelId: String) = booleanPreferencesKey("${modelId}_use_opencl")
 
@@ -64,12 +62,10 @@ class GenerationPreferences(private val context: Context) {
         }
     }
 
-    suspend fun getBaseUrl(): String {
-        return context.dataStore.data
-            .map { preferences ->
-                preferences[BASE_URL_KEY] ?: "https://huggingface.co/"
-            }.first()
-    }
+    suspend fun getBaseUrl(): String = context.dataStore.data
+        .map { preferences ->
+            preferences[BASE_URL_KEY] ?: "https://huggingface.co/"
+        }.first()
 
     suspend fun saveSelectedSource(source: String) {
         context.dataStore.edit { preferences ->
@@ -77,12 +73,10 @@ class GenerationPreferences(private val context: Context) {
         }
     }
 
-    suspend fun getSelectedSource(): String {
-        return context.dataStore.data
-            .map { preferences ->
-                preferences[SELECTED_SOURCE_KEY] ?: "huggingface"
-            }.first()
-    }
+    suspend fun getSelectedSource(): String = context.dataStore.data
+        .map { preferences ->
+            preferences[SELECTED_SOURCE_KEY] ?: "huggingface"
+        }.first()
 
     suspend fun saveAllFields(
         modelId: String,
@@ -97,7 +91,7 @@ class GenerationPreferences(private val context: Context) {
         useOpenCL: Boolean,
         batchCounts: Int,
         scheduler: String,
-        aspectRatio: String = "1:1"
+        aspectRatio: String = "1:1",
     ) {
         context.dataStore.edit { preferences ->
             preferences[getPromptKey(modelId)] = prompt
@@ -122,32 +116,30 @@ class GenerationPreferences(private val context: Context) {
         }
     }
 
-    fun getPreferences(modelId: String): Flow<GenerationPrefs> {
-        return context.dataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(emptyPreferences())
-                } else {
-                    throw exception
-                }
+    fun getPreferences(modelId: String): Flow<GenerationPrefs> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
             }
-            .map { preferences ->
-                GenerationPrefs(
-                    prompt = preferences[getPromptKey(modelId)] ?: "",
-                    negativePrompt = preferences[getNegativePromptKey(modelId)] ?: "",
-                    steps = preferences[getStepsKey(modelId)] ?: 20f,
-                    cfg = preferences[getCfgKey(modelId)] ?: 7f,
-                    seed = preferences[getSeedKey(modelId)] ?: "",
-                    width = preferences[getWidthKey(modelId)] ?: -1,
-                    height = preferences[getHeightKey(modelId)] ?: -1,
-                    denoiseStrength = preferences[getDenoiseStrengthKey(modelId)] ?: 0.6f,
-                    useOpenCL = preferences[getUseOpenCLKey(modelId)] ?: false,
-                    batchCounts = preferences[getBatchCountsKey(modelId)] ?: 1,
-                    scheduler = preferences[getSchedulerKey(modelId)] ?: "dpm",
-                    aspectRatio = preferences[getAspectRatioKey(modelId)] ?: "1:1"
-                )
-            }
-    }
+        }
+        .map { preferences ->
+            GenerationPrefs(
+                prompt = preferences[getPromptKey(modelId)] ?: "",
+                negativePrompt = preferences[getNegativePromptKey(modelId)] ?: "",
+                steps = preferences[getStepsKey(modelId)] ?: 20f,
+                cfg = preferences[getCfgKey(modelId)] ?: 7f,
+                seed = preferences[getSeedKey(modelId)] ?: "",
+                width = preferences[getWidthKey(modelId)] ?: -1,
+                height = preferences[getHeightKey(modelId)] ?: -1,
+                denoiseStrength = preferences[getDenoiseStrengthKey(modelId)] ?: 0.6f,
+                useOpenCL = preferences[getUseOpenCLKey(modelId)] ?: false,
+                batchCounts = preferences[getBatchCountsKey(modelId)] ?: 1,
+                scheduler = preferences[getSchedulerKey(modelId)] ?: "dpm",
+                aspectRatio = preferences[getAspectRatioKey(modelId)] ?: "1:1",
+            )
+        }
 
     suspend fun clearPreferencesForModel(modelId: String) {
         context.dataStore.edit { preferences ->
@@ -180,5 +172,5 @@ data class GenerationPrefs(
     val useOpenCL: Boolean = false,
     val batchCounts: Int = 1,
     val scheduler: String = "dpm",
-    val aspectRatio: String = "1:1"
+    val aspectRatio: String = "1:1",
 )

@@ -1,29 +1,29 @@
 package io.github.xororz.localdream.service
 
 import android.app.*
-import android.content.Context
-import android.content.Intent
-import android.os.IBinder
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.createBitmap
+import io.github.xororz.localdream.R
+import java.io.BufferedReader
+import java.io.File
+import java.io.IOException
+import java.io.InputStreamReader
+import java.util.Base64
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.Base64
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
-import java.util.concurrent.TimeUnit
-import io.github.xororz.localdream.R
-import java.io.File
-import androidx.core.graphics.createBitmap
 
 class BackgroundGenerationService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -60,8 +60,7 @@ class BackgroundGenerationService : Service() {
 
     sealed class GenerationState {
         object Idle : GenerationState()
-        data class Progress(val progress: Float, val intermediateImage: Bitmap? = null) :
-            GenerationState()
+        data class Progress(val progress: Float, val intermediateImage: Bitmap? = null) : GenerationState()
 
         data class Complete(val bitmap: Bitmap, val seed: Long?) : GenerationState()
         data class Error(val message: String) : GenerationState()
@@ -139,7 +138,7 @@ class BackgroundGenerationService : Service() {
                 } else {
                     Log.w(
                         "GenerationService",
-                        "has_mask is true but mask.txt not found"
+                        "has_mask is true but mask.txt not found",
                     )
                     null
                 }
@@ -175,7 +174,7 @@ class BackgroundGenerationService : Service() {
                 denoiseStrength,
                 useOpenCL,
                 scheduler,
-                aspectRatio
+                aspectRatio,
             )
         }
 
@@ -197,7 +196,7 @@ class BackgroundGenerationService : Service() {
         denoiseStrength: Float,
         useOpenCL: Boolean,
         scheduler: String,
-        aspectRatio: String
+        aspectRatio: String,
     ) = withContext(Dispatchers.IO) {
         try {
             updateState(GenerationState.Progress(0f))
@@ -244,8 +243,8 @@ class BackgroundGenerationService : Service() {
                     throw IOException(
                         this@BackgroundGenerationService.getString(
                             R.string.error_request_failed,
-                            response.code.toString()
-                        )
+                            response.code.toString(),
+                        ),
                     )
                 }
 
@@ -303,7 +302,7 @@ class BackgroundGenerationService : Service() {
                                             Log.e(
                                                 "BgGenService",
                                                 "Failed to decode intermediate image",
-                                                e
+                                                e,
                                             )
                                         }
                                     }
@@ -315,15 +314,15 @@ class BackgroundGenerationService : Service() {
                                 "complete" -> {
                                     Log.d(
                                         "BgGenService",
-                                        "=== Received complete message, parsing... ==="
+                                        "=== Received complete message, parsing... ===",
                                     )
                                     Log.d(
                                         "BgGenService",
-                                        "readLine took: ${readLineTime}ms, line length: ${line.length}"
+                                        "readLine took: ${readLineTime}ms, line length: ${line.length}",
                                     )
                                     Log.d(
                                         "BgGenService",
-                                        "JSONObject parsing took: ${jsonParseTime}ms, data length: ${data.length}"
+                                        "JSONObject parsing took: ${jsonParseTime}ms, data length: ${data.length}",
                                     )
                                     val completeStartTime = System.currentTimeMillis()
 
@@ -336,7 +335,7 @@ class BackgroundGenerationService : Service() {
                                     val resultHeight = message.optInt("height", 512)
                                     Log.d(
                                         "BgGenService",
-                                        "JSON extraction took: ${System.currentTimeMillis() - extractStart}ms, Base64 length: ${base64Image.length}"
+                                        "JSON extraction took: ${System.currentTimeMillis() - extractStart}ms, Base64 length: ${base64Image.length}",
                                     )
 
                                     if (base64Image.isNullOrEmpty()) {
@@ -348,7 +347,7 @@ class BackgroundGenerationService : Service() {
                                     val imageBytes = Base64.getDecoder().decode(base64Image)
                                     Log.d(
                                         "BgGenService",
-                                        "Base64 decoding took: ${System.currentTimeMillis() - decodeStartTime}ms, decoded size: ${imageBytes.size} bytes"
+                                        "Base64 decoding took: ${System.currentTimeMillis() - decodeStartTime}ms, decoded size: ${imageBytes.size} bytes",
                                     )
 
                                     // 3. RGB conversion + Bitmap creation
@@ -371,28 +370,28 @@ class BackgroundGenerationService : Service() {
                                         0,
                                         0,
                                         resultWidth,
-                                        resultHeight
+                                        resultHeight,
                                     )
                                     Log.d(
                                         "BgGenService",
-                                        "RGB conversion + Bitmap creation took: ${System.currentTimeMillis() - bitmapStartTime}ms"
+                                        "RGB conversion + Bitmap creation took: ${System.currentTimeMillis() - bitmapStartTime}ms",
                                     )
 
                                     Log.d(
                                         "BgGenService",
-                                        "=== Total processing time for complete message: ${System.currentTimeMillis() - completeStartTime}ms, size: ${resultWidth}x${resultHeight} ==="
+                                        "=== Total processing time for complete message: ${System.currentTimeMillis() - completeStartTime}ms, size: ${resultWidth}x$resultHeight ===",
                                     )
 
                                     updateState(
                                         GenerationState.Complete(
                                             bitmap,
-                                            returnedSeed
-                                        )
+                                            returnedSeed,
+                                        ),
                                     )
 
                                     Log.d(
                                         "BgGenService",
-                                        "Generation completed, waiting for UI to consume bitmap"
+                                        "Generation completed, waiting for UI to consume bitmap",
                                     )
 
                                     // Wait for UI to consume the bitmap with timeout
@@ -402,7 +401,7 @@ class BackgroundGenerationService : Service() {
                                         if (System.currentTimeMillis() - waitStartTime > timeoutMs) {
                                             Log.w(
                                                 "BgGenService",
-                                                "Timeout waiting for bitmap consumption"
+                                                "Timeout waiting for bitmap consumption",
                                             )
                                             break
                                         }
@@ -411,7 +410,7 @@ class BackgroundGenerationService : Service() {
 
                                     Log.d(
                                         "BgGenService",
-                                        "Bitmap consumed, stopping service. Wait time: ${System.currentTimeMillis() - waitStartTime}ms"
+                                        "Bitmap consumed, stopping service. Wait time: ${System.currentTimeMillis() - waitStartTime}ms",
                                     )
                                     stopSelf()
                                 }
@@ -421,7 +420,7 @@ class BackgroundGenerationService : Service() {
                                         message.optString("message", "unknown error")
                                     Log.e(
                                         "BgGenService",
-                                        "Received error message: $errorMsg"
+                                        "Received error message: $errorMsg",
                                     )
                                     throw IOException(errorMsg)
                                 }
@@ -434,8 +433,8 @@ class BackgroundGenerationService : Service() {
             Log.e("GenerationService", "generation error", e)
             updateState(
                 GenerationState.Error(
-                    e.message ?: this@BackgroundGenerationService.getString(R.string.unknown_error)
-                )
+                    e.message ?: this@BackgroundGenerationService.getString(R.string.unknown_error),
+                ),
             )
             stopSelf()
         }
@@ -452,7 +451,6 @@ class BackgroundGenerationService : Service() {
     }
 
     private fun createNotification(progress: Float): Notification {
-
         val openAppIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -460,7 +458,7 @@ class BackgroundGenerationService : Service() {
             this,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)

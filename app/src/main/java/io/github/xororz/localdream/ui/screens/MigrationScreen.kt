@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,18 +25,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.MigrationState
+import io.github.xororz.localdream.ui.components.SmoothLinearWavyProgressIndicator
 
 @Composable
-fun MigrationScreen(
-    state: MigrationState,
-    onRetry: () -> Unit,
-    onSkip: () -> Unit,
-) {
+fun MigrationScreen(state: MigrationState, onRetry: () -> Unit, onSkip: () -> Unit) {
     BackHandler(enabled = true) { /* block back */ }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+        color = MaterialTheme.colorScheme.surface,
     ) {
         Box(
             modifier = Modifier
@@ -54,6 +49,7 @@ fun MigrationScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ProgressContent(state: MigrationState) {
     Column(
@@ -74,13 +70,12 @@ private fun ProgressContent(state: MigrationState) {
             is MigrationState.InProgress -> {
                 val fraction = if (state.total > 0) {
                     state.current.toFloat() / state.total
-                } else 0f
-                LinearProgressIndicator(
-                    progress = { fraction.coerceIn(0f, 1f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                    strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
+                } else {
+                    0f
+                }
+                SmoothLinearWavyProgressIndicator(
+                    progress = fraction,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
@@ -105,7 +100,7 @@ private fun ProgressContent(state: MigrationState) {
             }
 
             else -> {
-                CircularProgressIndicator()
+                ContainedLoadingIndicator()
             }
         }
 
@@ -120,11 +115,7 @@ private fun ProgressContent(state: MigrationState) {
 }
 
 @Composable
-private fun FailedContent(
-    state: MigrationState.Failed,
-    onRetry: () -> Unit,
-    onSkip: () -> Unit,
-) {
+private fun FailedContent(state: MigrationState.Failed, onRetry: () -> Unit, onSkip: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +132,7 @@ private fun FailedContent(
         Spacer(Modifier.height(16.dp))
         Surface(
             color = MaterialTheme.colorScheme.errorContainer,
-            shape = RoundedCornerShape(8.dp),
+            shape = MaterialTheme.shapes.extraSmall,
         ) {
             Text(
                 text = state.error.message ?: state.error::class.java.simpleName,

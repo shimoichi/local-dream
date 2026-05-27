@@ -1,5 +1,6 @@
 package io.github.xororz.localdream.ui.screens
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -7,6 +8,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,14 +23,22 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -35,46 +46,38 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.activity.compose.BackHandler
-import androidx.compose.ui.res.stringResource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
+import io.github.xororz.localdream.R
+import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import java.io.ByteArrayOutputStream
 import java.util.Base64
 import kotlin.math.max
 import kotlin.math.sqrt
-import android.content.Context
-import androidx.compose.ui.graphics.Color as ComposeColor
-import io.github.xororz.localdream.R
-import androidx.core.content.edit
-import androidx.compose.ui.draw.clipToBounds
-import androidx.core.graphics.createBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class ToolMode {
     BRUSH,
-    ERASER
+    ERASER,
 }
 
-data class PathData(
-    val points: List<Offset>,
-    val size: Float,
-    val mode: ToolMode,
-    val color: Int = Color.WHITE
-)
+data class PathData(val points: List<Offset>, val size: Float, val mode: ToolMode, val color: Int = Color.WHITE)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InpaintScreen(
     originalBitmap: Bitmap,
     existingMaskBitmap: Bitmap? = null,
     existingPathHistory: List<PathData>? = null,
     onInpaintComplete: (String, Bitmap, Bitmap, List<PathData>) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -87,7 +90,7 @@ fun InpaintScreen(
     val savedToolMode =
         remember { sharedPrefs.getString("tool_mode", ToolMode.BRUSH.name) ?: ToolMode.BRUSH.name }
 
-    var brushColor by remember { mutableStateOf(savedColor) }
+    var brushColor by remember { mutableIntStateOf(savedColor) }
     var showColorPicker by remember { mutableStateOf(false) }
     var currentToolMode by remember { mutableStateOf(ToolMode.valueOf(savedToolMode)) }
 
@@ -104,7 +107,7 @@ fun InpaintScreen(
             Color.YELLOW,
             Color.CYAN,
             Color.MAGENTA,
-            Color.BLACK
+            Color.BLACK,
         )
     }
 
@@ -128,13 +131,13 @@ fun InpaintScreen(
     var displayMaskBitmap by remember { mutableStateOf(tempBitmap.asImageBitmap()) }
 
     val androidPath = remember { Path() }
-    var brushSizeDpValue by remember { mutableStateOf(30f) }
+    var brushSizeDpValue by remember { mutableFloatStateOf(30f) }
     var isDrawing by remember { mutableStateOf(false) }
     val currentPathPoints = remember { mutableStateListOf<Offset>() }
 
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
 
     val pathHistory = remember {
         mutableStateListOf<PathData>().apply {
@@ -180,7 +183,7 @@ fun InpaintScreen(
 
     var imageRect by remember { mutableStateOf<Rect?>(null) }
 
-    var displayUpdateTrigger by remember { mutableStateOf(0) }
+    var displayUpdateTrigger by remember { mutableIntStateOf(0) }
 
     fun updateAllBrushPaths(newColor: Int) {
         pathHistory.forEachIndexed { index, pathData ->
@@ -201,8 +204,10 @@ fun InpaintScreen(
         val rect = imageRect ?: return null
         if (!rect.contains(canvasPoint)) {
             val tolerance = 5f * density.density
-            if (canvasPoint.x < rect.left - tolerance || canvasPoint.x > rect.right + tolerance ||
-                canvasPoint.y < rect.top - tolerance || canvasPoint.y > rect.bottom + tolerance
+            if (canvasPoint.x < rect.left - tolerance ||
+                canvasPoint.x > rect.right + tolerance ||
+                canvasPoint.y < rect.top - tolerance ||
+                canvasPoint.y > rect.bottom + tolerance
             ) {
                 return null
             }
@@ -213,16 +218,11 @@ fun InpaintScreen(
         val relativeY = (clampedY - rect.top) / rect.height
         return Offset(
             relativeX * originalBitmap.width,
-            relativeY * originalBitmap.height
+            relativeY * originalBitmap.height,
         )
     }
 
-    fun convertDpToImagePixels(
-        dpValue: Float,
-        density: Density,
-        imageRect: Rect?,
-        originalWidth: Int
-    ): Float {
+    fun convertDpToImagePixels(dpValue: Float, density: Density, imageRect: Rect?, originalWidth: Int): Float {
         val rect = imageRect ?: return dpValue
 
         val brushSizeInScreenPx = with(density) { dpValue.dp.toPx() }
@@ -264,7 +264,7 @@ fun InpaintScreen(
                 brushSizeDpValue,
                 density,
                 imageRect,
-                originalBitmap.width
+                originalBitmap.width,
             ) / scale
             androidPath.reset()
             androidPath.moveTo(currentPathPoints[0].x, currentPathPoints[0].y)
@@ -346,7 +346,7 @@ fun InpaintScreen(
         density,
         displayUpdateTrigger,
         currentToolMode,
-        scale
+        scale,
     ) {
         updateDisplayMask()
     }
@@ -358,31 +358,36 @@ fun InpaintScreen(
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
                         contentPadding = PaddingValues(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         items(colorOptions.size) { index ->
                             val color = colorOptions[index]
-                            Box(
+                            val isSelected = color == brushColor
+                            Surface(
+                                onClick = {
+                                    brushColor = color
+                                    showColorPicker = false
+                                },
                                 modifier = Modifier
                                     .padding(8.dp)
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(ComposeColor(color))
-                                    .border(
-                                        width = 2.dp,
-                                        color = if (color == brushColor) ComposeColor.Black else ComposeColor.Transparent,
-                                        shape = CircleShape
-                                    )
-                                    .clickable {
-                                        brushColor = color
-                                        showColorPicker = false
-                                    }
-                            )
+                                    .size(48.dp),
+                                shape = CircleShape,
+                                color = ComposeColor(color),
+                                border = BorderStroke(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                ),
+                                shadowElevation = if (isSelected) 4.dp else 1.dp,
+                            ) {}
                         }
                     }
                 }
@@ -391,7 +396,7 @@ fun InpaintScreen(
                 TextButton(onClick = { showColorPicker = false }) {
                     Text(stringResource(R.string.close))
                 }
-            }
+            },
         )
     }
 
@@ -403,7 +408,7 @@ fun InpaintScreen(
                     IconButton(onClick = onCancel) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
                         )
                     }
                 },
@@ -412,25 +417,25 @@ fun InpaintScreen(
                         onClick = {
                             if (!isLoading) processMask()
                         },
-                        enabled = !isLoading
+                        enabled = !isLoading,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Complete Marking"
+                            contentDescription = "Complete Marking",
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
                     modifier = Modifier
@@ -476,7 +481,7 @@ fun InpaintScreen(
                                     val pivotY = containerHeight / 2f
                                     return Offset(
                                         (pos.x - offsetX - pivotX) / scale + pivotX,
-                                        (pos.y - offsetY - pivotY) / scale + pivotY
+                                        (pos.y - offsetY - pivotY) / scale + pivotY,
                                     )
                                 }
 
@@ -503,15 +508,15 @@ fun InpaintScreen(
                                                     brushSizeDpValue,
                                                     density,
                                                     imageRect,
-                                                    originalBitmap.width
+                                                    originalBitmap.width,
                                                 ) / scale
                                                 pathHistory.add(
                                                     PathData(
                                                         points = currentPathPoints.toList(),
                                                         size = imgPxSize,
                                                         mode = currentToolMode,
-                                                        color = brushColor
-                                                    )
+                                                        color = brushColor,
+                                                    ),
                                                 )
                                                 currentPathPoints.clear()
                                                 redoStack.clear()
@@ -535,23 +540,27 @@ fun InpaintScreen(
                                         val positions = activeChanges.map { it.position }
                                         val prevCentroid = Offset(
                                             prevPointers.map { it.x }.average().toFloat(),
-                                            prevPointers.map { it.y }.average().toFloat()
+                                            prevPointers.map { it.y }.average().toFloat(),
                                         )
                                         val currCentroid = Offset(
                                             positions.map { it.x }.average().toFloat(),
-                                            positions.map { it.y }.average().toFloat()
+                                            positions.map { it.y }.average().toFloat(),
                                         )
 
                                         val prevSpread = if (prevPointers.size >= 2) {
                                             val dx = prevPointers[0].x - prevPointers[1].x
                                             val dy = prevPointers[0].y - prevPointers[1].y
                                             sqrt(dx * dx + dy * dy)
-                                        } else 0f
+                                        } else {
+                                            0f
+                                        }
                                         val currSpread = if (positions.size >= 2) {
                                             val dx = positions[0].x - positions[1].x
                                             val dy = positions[0].y - positions[1].y
                                             sqrt(dx * dx + dy * dy)
-                                        } else 0f
+                                        } else {
+                                            0f
+                                        }
 
                                         val zoomFactor =
                                             if (prevSpread > 10f) currSpread / prevSpread else 1f
@@ -563,9 +572,11 @@ fun InpaintScreen(
                                         val pivotX = containerWidth / 2f
                                         val pivotY = containerHeight / 2f
                                         val newOffsetX =
-                                            (currCentroid.x - pivotX) * (1f - effectiveZoom) + offsetX * effectiveZoom + panDelta.x
+                                            (currCentroid.x - pivotX) * (1f - effectiveZoom) + offsetX * effectiveZoom +
+                                                panDelta.x
                                         val newOffsetY =
-                                            (currCentroid.y - pivotY) * (1f - effectiveZoom) + offsetY * effectiveZoom + panDelta.y
+                                            (currCentroid.y - pivotY) * (1f - effectiveZoom) + offsetY * effectiveZoom +
+                                                panDelta.y
 
                                         scale = newScale
                                         offsetX = newOffsetX
@@ -585,7 +596,7 @@ fun InpaintScreen(
                                     }
                                 }
                             }
-                        }
+                        },
                 ) {
                     Box(
                         modifier = Modifier
@@ -594,18 +605,18 @@ fun InpaintScreen(
                                 scaleX = scale,
                                 scaleY = scale,
                                 translationX = offsetX,
-                                translationY = offsetY
-                            )
+                                translationY = offsetY,
+                            ),
                     ) {
                         Image(
                             bitmap = originalBitmap.asImageBitmap(),
                             contentDescription = "Original Image",
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         )
 
                         Canvas(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             val rect = imageRect ?: return@Canvas
                             drawImage(
@@ -614,7 +625,7 @@ fun InpaintScreen(
                                 srcSize = IntSize(tempBitmap.width, tempBitmap.height),
                                 dstOffset = IntOffset(rect.left.toInt(), rect.top.toInt()),
                                 dstSize = IntSize(rect.width.toInt(), rect.height.toInt()),
-                                alpha = 0.6f
+                                alpha = 0.6f,
                             )
                         }
                     }
@@ -625,17 +636,17 @@ fun InpaintScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     shape = MaterialTheme.shapes.medium,
-                    tonalElevation = 4.dp
+                    tonalElevation = 4.dp,
                 ) {
                     Column(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
                     ) {
                         Text(
                             stringResource(R.string.inpaint_hint),
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.padding(bottom = 12.dp),
                         )
 
                         Row(
@@ -645,86 +656,46 @@ fun InpaintScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Row(
-                                modifier = Modifier.width(80.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    ButtonGroupDefaults.ConnectedSpaceBetween,
+                                ),
                             ) {
-                                Box(
-                                    modifier = Modifier.size(36.dp),
-                                    contentAlignment = Alignment.Center
+                                ToggleButton(
+                                    checked = currentToolMode == ToolMode.BRUSH,
+                                    onCheckedChange = { if (it) currentToolMode = ToolMode.BRUSH },
+                                    shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
                                 ) {
-                                    if (currentToolMode == ToolMode.BRUSH) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    MaterialTheme.colorScheme.primary.copy(
-                                                        alpha = 0.15f
-                                                    )
-                                                )
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = { currentToolMode = ToolMode.BRUSH },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Brush,
-                                            contentDescription = "Brush Tool",
-                                            tint = if (currentToolMode == ToolMode.BRUSH)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.Default.Brush,
+                                        contentDescription = "Brush Tool",
+                                        modifier = Modifier.size(ToggleButtonDefaults.IconSize),
+                                    )
                                 }
-
-                                Box(
-                                    modifier = Modifier.size(36.dp),
-                                    contentAlignment = Alignment.Center
+                                ToggleButton(
+                                    checked = currentToolMode == ToolMode.ERASER,
+                                    onCheckedChange = { if (it) currentToolMode = ToolMode.ERASER },
+                                    shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
                                 ) {
-                                    if (currentToolMode == ToolMode.ERASER) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    MaterialTheme.colorScheme.primary.copy(
-                                                        alpha = 0.15f
-                                                    )
-                                                )
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = { currentToolMode = ToolMode.ERASER },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.FormatPaint,
-                                            contentDescription = "Eraser Tool",
-                                            tint = if (currentToolMode == ToolMode.ERASER)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.Default.FormatPaint,
+                                        contentDescription = "Eraser Tool",
+                                        modifier = Modifier.size(ToggleButtonDefaults.IconSize),
+                                    )
                                 }
                             }
 
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(horizontal = 8.dp)
+                                    .padding(horizontal = 8.dp),
                             ) {
                                 Slider(
                                     value = brushSizeDpValue,
                                     onValueChange = { brushSizeDpValue = it },
                                     valueRange = 5f..50f,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
 
@@ -733,29 +704,32 @@ fun InpaintScreen(
                                     .width(50.dp)
                                     .padding(start = 4.dp)
                                     .aspectRatio(1f),
-                                contentAlignment = Alignment.Center
+                                contentAlignment = Alignment.Center,
                             ) {
                                 val indicatorSize = with(density) { brushSizeDpValue.dp }
+                                val eraserColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                val borderColor = MaterialTheme.colorScheme.outlineVariant
                                 Box(
                                     modifier = Modifier
                                         .size(indicatorSize.coerceAtMost(50.dp))
                                         .clip(CircleShape)
                                         .background(
-                                            if (currentToolMode == ToolMode.BRUSH)
+                                            if (currentToolMode == ToolMode.BRUSH) {
                                                 ComposeColor(brushColor)
-                                            else
-                                                ComposeColor.LightGray.copy(alpha = 0.5f)
+                                            } else {
+                                                eraserColor
+                                            },
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = ComposeColor.DarkGray.copy(alpha = 0.3f),
-                                            shape = CircleShape
+                                            color = borderColor,
+                                            shape = CircleShape,
                                         )
                                         .clickable(enabled = currentToolMode == ToolMode.BRUSH) {
                                             if (currentToolMode == ToolMode.BRUSH) {
                                                 showColorPicker = true
                                             }
-                                        }
+                                        },
                                 )
                             }
                         }
@@ -766,17 +740,17 @@ fun InpaintScreen(
                                 .padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(
                                 16.dp,
-                                Alignment.CenterHorizontally
-                            )
+                                Alignment.CenterHorizontally,
+                            ),
                         ) {
                             Button(
                                 onClick = { undoLastPath() },
-                                enabled = pathHistory.isNotEmpty() && !isLoading
+                                enabled = pathHistory.isNotEmpty() && !isLoading,
                             ) {
                                 Icon(
                                     Icons.Default.Refresh,
                                     contentDescription = "Undo",
-                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                    modifier = Modifier.size(ButtonDefaults.IconSize),
                                 )
                                 Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                 Text(stringResource(R.string.undo))
@@ -785,12 +759,11 @@ fun InpaintScreen(
                             Button(
                                 onClick = { redoLastPath() },
                                 enabled = redoStack.isNotEmpty() && !isLoading,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                             ) {
                                 Icon(
-                                    Icons.Default.Redo,
+                                    Icons.AutoMirrored.Filled.Redo,
                                     contentDescription = "Redo",
-                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                    modifier = Modifier.size(ButtonDefaults.IconSize),
                                 )
                                 Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                 Text(stringResource(R.string.redo))
@@ -800,19 +773,11 @@ fun InpaintScreen(
                 }
             }
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ComposeColor.Black.copy(alpha = 0.6f))
-                        .pointerInput(Unit) {},
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(64.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+            BlockingProgressOverlay(
+                visible = isLoading,
+                scrimAlpha = 0.6f,
+            ) {
+                ContainedLoadingIndicator()
             }
 
             if (errorMessage != null) {
@@ -820,27 +785,27 @@ fun InpaintScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(32.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
                             Text(
                                 text = "Error",
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = errorMessage ?: "Unknown error occurred",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
@@ -848,8 +813,8 @@ fun InpaintScreen(
                                 modifier = Modifier.align(Alignment.End),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                )
+                                    contentColor = MaterialTheme.colorScheme.onError,
+                                ),
                             ) {
                                 Text("OK")
                             }

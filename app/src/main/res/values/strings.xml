@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Local Dream</string>
 
     <!-- Models -->
@@ -8,6 +8,8 @@
     <string name="illustriousv16_description">WAI Illustrious SDXL v16</string>
     <string name="capture_logs">Capture logs</string>
     <string name="capture_logs_hint">Collect app logs while a model is running, then show them after you exit</string>
+    <string name="listen_on_all_addresses">Allow LAN access</string>
+    <string name="listen_on_all_addresses_hint">Let other devices on the same network reach the backend (port 8081). Off = local only.</string>
     <string name="tag_autocomplete">Tag autocomplete</string>
     <string name="tag_autocomplete_hint">Suggest and correct tags while you type prompts</string>
     <string name="tag_alias_label">Alias</string>
@@ -17,11 +19,17 @@
     <string name="tag_main_dictionary_hint">Not imported. Suggestions are disabled until you import a CSV (e.g. danbooru.csv).</string>
     <string name="tag_translation_dictionary">Translation dictionary (optional)</string>
     <string name="tag_translation_dictionary_hint">Not imported. Import a 2- or 3-column CSV to search by your own language.</string>
-    <string name="tag_imported_status">%1$s · %2$d entries</string>
+    <plurals name="tag_imported_status">
+        <item quantity="one">%1$s · %2$d entry</item>
+        <item quantity="other">%1$s · %2$d entries</item>
+    </plurals>
     <string name="tag_import">Import CSV</string>
     <string name="tag_reimport">Replace</string>
     <string name="tag_clear">Clear</string>
-    <string name="tag_import_success">Imported %1$d entries</string>
+    <plurals name="tag_import_success">
+        <item quantity="one">Imported %1$d entry</item>
+        <item quantity="other">Imported %1$d entries</item>
+    </plurals>
     <string name="tag_import_failed">Import failed</string>
     <string name="sdxl_lowram">SDXL low RAM mode</string>
     <string name="sdxl_lowram_hint">For SDXL only: load each model on demand and free it after use. Required on devices with less than 16GB RAM. Disables in-progress preview.</string>
@@ -40,6 +48,19 @@
 
     <!-- Common -->
     <string name="settings">Settings</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_preset">Color theme</string>
+    <string name="theme_preset_hint">Used when dynamic color is off</string>
+    <string name="dynamic_color">Dynamic color</string>
+    <string name="dynamic_color_hint">Match colors to your wallpaper (Android 12+)</string>
+    <string name="dark_mode">Dark mode</string>
+    <string name="dark_mode_system">System</string>
+    <string name="dark_mode_light">Light</string>
+    <string name="dark_mode_dark">Dark</string>
+    <string name="theme_tangerine">Tangerine</string>
+    <string name="theme_forest">Forest</string>
+    <string name="theme_ocean">Ocean</string>
+    <string name="theme_amber">Amber</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
@@ -50,14 +71,16 @@
     <string name="delete_confirm">Delete selected %s models? This action cannot be undone.</string>
     <string name="got_it">Got It!</string>
     <string name="yes">Yes</string>
-    <string name="no">No</string>
     <string name="about_app">Note</string>
     <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nThis project is open source at https://github.com/xororz/local-dream where you can view the source code or submit issues</string>
     <string name="help">Help</string>
 
     <!-- Model List Screen -->
     <string name="available_models">Available Models</string>
-    <string name="selected_items">%d Selected</string>
+    <plurals name="selected_items">
+        <item quantity="one">%d Selected</item>
+        <item quantity="other">%d Selected</item>
+    </plurals>
     <string name="download">Download</string>
     <string name="download_from">Download From</string>
     <string name="download_settings_hint">Download from huggingface or other mirror url</string>
@@ -81,7 +104,10 @@
     <string name="show_process">Show Generation Process</string>
     <string name="show_process_hint">Only works for NPU models. Show intermediate generation steps. This will slow down generation speed. Enable only when curious about the process.</string>
     <string name="preview_stride">Preview Stride</string>
-    <string name="preview_stride_hint">Update preview every %d steps (1-10).</string>
+    <plurals name="preview_stride_hint">
+        <item quantity="one">Update preview every %d step (1–10).</item>
+        <item quantity="other">Update preview every %d steps (1–10).</item>
+    </plurals>
     <!-- Crop Screen -->
     <string name="crop_image">Crop Image</string>
     <string name="crop_hint">Drag to adjust the crop area</string>
@@ -109,21 +135,36 @@
     <string name="history_tab">History</string>
     <string name="no_history">No generation history</string>
     <string name="no_history_hint">History will be saved after generation</string>
-    <string name="selected_items_count">Selected %d items</string>
+    <plurals name="selected_items_count">
+        <item quantity="one">Selected %d item</item>
+        <item quantity="other">Selected %d items</item>
+    </plurals>
     <string name="generation_params_title">Generation Parameters</string>
     <string name="delete_image">Delete Image</string>
     <string name="delete_image_confirm">Are you sure you want to delete this image? This action cannot be undone.</string>
     <string name="deleted">Deleted</string>
     <string name="delete_failed_message">Delete failed</string>
     <string name="batch_delete">Batch Delete</string>
-    <string name="batch_delete_confirm">Are you sure you want to delete %d selected images? This action cannot be undone.</string>
+    <plurals name="batch_delete_confirm">
+        <item quantity="one">Are you sure you want to delete %d selected image? This action cannot be undone.</item>
+        <item quantity="other">Are you sure you want to delete %d selected images? This action cannot be undone.</item>
+    </plurals>
     <string name="batch_save">Batch Save</string>
-    <string name="batch_save_confirm">Save %d selected images to gallery?</string>
+    <plurals name="batch_save_confirm">
+        <item quantity="one">Save %d selected image to gallery?</item>
+        <item quantity="other">Save %d selected images to gallery?</item>
+    </plurals>
     <string name="batch_saving_progress">Saving %1$d / %2$d</string>
-    <string name="saved_count">Saved %d images</string>
-    <string name="saved_count_with_failed">Saved %1$d images, %2$d failed</string>
-    <string name="deleted_count">Deleted %d items</string>
-    <string name="deleted_count_with_failed">Successfully deleted %1$d items, failed %2$d items</string>
+    <plurals name="saved_count">
+        <item quantity="one">Saved %d image</item>
+        <item quantity="other">Saved %d images</item>
+    </plurals>
+    <string name="saved_count_with_failed" tools:ignore="PluralsCandidate">Saved %1$d images, %2$d failed</string>
+    <plurals name="deleted_count">
+        <item quantity="one">Deleted %d item</item>
+        <item quantity="other">Deleted %d items</item>
+    </plurals>
+    <string name="deleted_count_with_failed" tools:ignore="PluralsCandidate">Successfully deleted %1$d items, failed %2$d items</string>
     <string name="confirm_exit">Confirm to Exit</string>
     <string name="confirm_exit_hint">Generation in progress, Are you sure to Exit?</string>
     <string name="reset">Reset</string>
@@ -143,13 +184,13 @@
     <string name="reproduce_params_hint">Pick the fields to apply to the prompt page.</string>
     <string name="select_all">Select all</string>
     <string name="deselect_all">Deselect all</string>
-    <string name="result_params">steps: %s / CFG: %.1f / seed: %s</string>
-    <string name="result_params_2">size: %sx%s / time: %s / %s</string>
+    <string name="result_params">steps: %1$s / CFG: %2$.1f / seed: %3$s</string>
+    <string name="result_params_2">size: %1$sx%2$s / time: %3$s / %4$s</string>
     <string name="params_detail">Details</string>
     <string name="basic_params">Basic</string>
     <string name="basic_model">Model: %s</string>
     <string name="basic_step">Steps: %d</string>
-    <string name="basic_size">Size: %dx%d</string>
+    <string name="basic_size">Size: %1$dx%2$d</string>
     <string name="basic_seed">Seed: %s</string>
     <string name="basic_runtime">Runtime: %s</string>
     <string name="basic_mode">Mode: %s</string>
@@ -197,7 +238,10 @@
     <string name="loading_files">Loading files…</string>
     <string name="back_to_folders">Back to Folders</string>
     <string name="model_folder">Model: %s</string>
-    <string name="file_count">%d files</string>
+    <plurals name="file_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
     <string name="clear_cache">Clear Cache</string>
     <string name="clear_cache_with_size">Clear Cache (%s)</string>
     <string name="clear_cache_confirm">Clear the cache directory for this model? Cached prompt embeddings and OpenCL kernels will be regenerated on next use.</string>
@@ -206,7 +250,6 @@
     <!-- Settings -->
     <string name="download_source">Download Source</string>
     <string name="feature_settings">Feature Settings</string>
-    <string name="file_management">File Management</string>
 
     <!-- Custom Model -->
     <string name="add_custom_model">Add Custom Model</string>
@@ -241,7 +284,6 @@
     <string name="lora_weight">Weight:</string>
 
     <!-- Embedding Manager -->
-    <string name="embedding_management">Embedding Management</string>
     <string name="embedding_manager">Embedding Manager</string>
     <string name="no_embeddings">No embedding files found</string>
     <string name="import_embedding">Import Embedding</string>

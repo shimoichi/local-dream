@@ -1,0 +1,80 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+complexity:
+  # Compose screens legitimately have many composables / large parameter lists
+  LongMethod:
+    active: false
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: false
+  NestedBlockDepth:
+    active: false
+  ComplexCondition:
+    threshold: 6
+
+style:
+  # Compose UI code uses magic numbers heavily (.dp values, alphas, durations)
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+  ReturnCount:
+    active: false
+  MaxLineLength:
+    active: false
+  UnnecessaryAbstractClass:
+    active: false
+  ForbiddenComment:
+    active: false
+  # Tag dictionary / model parsing legitimately uses multi-jump loops
+  UseCheckOrError:
+    active: false
+  LoopWithTooManyJumpStatements:
+    active: false
+  ThrowsCount:
+    active: false
+  # 'modifier' is the standard Compose convention parameter even when not applied
+  UnusedParameter:
+    allowedNames: 'ignored|expected|modifier'
+
+naming:
+  # Composables are PascalCase
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+  # Allow SCREAMING_SNAKE for private constants holding Preferences.Key etc
+  VariableNaming:
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+  # Allow _backingProperty convention for state holders and SCREAMING_SNAKE for const-like vals
+  ObjectPropertyNaming:
+    constantPattern: '[A-Za-z][_A-Za-z0-9]*'
+    propertyPattern: '(_)?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+    privatePropertyPattern: '(_)?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*'
+  # File 'Foo.kt' can hold a single class 'Bar' (e.g. Navigation.kt -> Screen)
+  MatchingDeclarationName:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    ignoreOverridden: true
+
+exceptions:
+  # Catching Exception/Throwable is common around backend interop
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    active: false
+  SwallowedException:
+    active: false
+  InstanceOfCheckForException:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false

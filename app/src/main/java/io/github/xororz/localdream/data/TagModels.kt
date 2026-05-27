@@ -5,7 +5,7 @@ enum class TagMatchType {
     Alias,
     Translation,
     Correction,
-    Embedding
+    Embedding,
 }
 
 data class TagEntry(
@@ -16,7 +16,7 @@ data class TagEntry(
     val aliases: List<String>,
     val normalizedEnglish: String,
     val normalizedAliases: List<String>,
-    val normalizedTranslation: String?
+    val normalizedTranslation: String?,
 )
 
 data class TagSuggestion(
@@ -26,15 +26,10 @@ data class TagSuggestion(
     val matchType: TagMatchType,
     val category: Int,
     val postCount: Int,
-    val score: Int
+    val score: Int,
 )
 
-data class ActiveTagContext(
-    val token: String,
-    val trimmedStart: Int,
-    val trimmedEnd: Int,
-    val segmentEnd: Int
-)
+data class ActiveTagContext(val token: String, val trimmedStart: Int, val trimmedEnd: Int, val segmentEnd: Int)
 
 data class DictionaryState(
     val mainImported: Boolean = false,
@@ -42,7 +37,7 @@ data class DictionaryState(
     val mainEntryCount: Int = 0,
     val translationImported: Boolean = false,
     val translationFileName: String? = null,
-    val translationEntryCount: Int = 0
+    val translationEntryCount: Int = 0,
 )
 
 sealed class ImportResult {

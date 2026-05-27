@@ -5,15 +5,15 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.Model
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import io.github.xororz.localdream.data.ModelRepository
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import io.github.xororz.localdream.data.ModelRepository
-import io.github.xororz.localdream.BuildConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class BackendService : Service() {
     private var process: Process? = null
@@ -59,7 +59,7 @@ class BackendService : Service() {
         Log.i(TAG, "service started command: ${intent?.action}")
         startForeground(
             NOTIFICATION_ID,
-            createNotification(this.getString(R.string.backend_notify))
+            createNotification(this.getString(R.string.backend_notify)),
         )
 
         when (intent?.action) {
@@ -140,7 +140,7 @@ class BackendService : Service() {
             this,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -165,11 +165,12 @@ class BackendService : Service() {
                 qnnlibsAssets?.forEach { fileName ->
                     val targetLib = File(runtimeDir, fileName)
 
-                    val needsCopy = !targetLib.exists() || run {
-                        val assetInputStream = assets.open("qnnlibs/$fileName")
-                        val assetSize = assetInputStream.use { it.available().toLong() }
-                        targetLib.length() != assetSize
-                    }
+                    val needsCopy = !targetLib.exists() ||
+                        run {
+                            val assetInputStream = assets.open("qnnlibs/$fileName")
+                            val assetSize = assetInputStream.use { it.available().toLong() }
+                            targetLib.length() != assetSize
+                        }
 
                     if (needsCopy) {
                         val assetInputStream = assets.open("qnnlibs/$fileName")
@@ -204,7 +205,7 @@ class BackendService : Service() {
                     safetyCheckerTarget.setReadable(true, true)
                     Log.i(
                         TAG,
-                        "Safety checker model copied to: ${safetyCheckerTarget.absolutePath}"
+                        "Safety checker model copied to: ${safetyCheckerTarget.absolutePath}",
                     )
                 } catch (e: IOException) {
                     Log.e(TAG, "copy safety_checker.mnn failed", e)
@@ -217,7 +218,6 @@ class BackendService : Service() {
 
             Log.i(TAG, "Runtime directory prepared: ${runtimeDir.absolutePath}")
             Log.i(TAG, "Runtime files: ${runtimeDir.list()?.joinToString()}")
-
         } catch (e: Exception) {
             Log.e(TAG, "Prepare runtime dir failed", e)
             updateState(BackendState.Error("Prepare runtime dir failed: ${e.message}"))
@@ -226,7 +226,7 @@ class BackendService : Service() {
     }
 
     private fun startBackend(model: Model, width: Int, height: Int): Boolean {
-        Log.i(TAG, "backend start, model: ${model.name}, resolution: ${width}×${height}")
+        Log.i(TAG, "backend start, model: ${model.name}, resolution: $width×$height")
         updateState(BackendState.Starting)
 
         try {
@@ -242,6 +242,7 @@ class BackendService : Service() {
 
             val preferences = this.getSharedPreferences("app_prefs", MODE_PRIVATE)
             val useImg2img = preferences.getBoolean("use_img2img", true)
+            val listenOnAll = preferences.getBoolean("listen_on_all_addresses", false)
 
             var clipfilename = "clip.bin"
             if (model.useCpuClip) {
@@ -256,35 +257,37 @@ class BackendService : Service() {
                 "--backend", File(runtimeDir, "libQnnHtp.so").absolutePath,
                 "--system_library", File(runtimeDir, "libQnnSystem.so").absolutePath,
                 "--port", "8081",
-                "--text_embedding_size", model.textEmbeddingSize.toString()
+                "--text_embedding_size", model.textEmbeddingSize.toString(),
             )
             if (!model.isSdxl && (width != 512 || height != 512)) {
                 val patchFile = if (width == height) {
-                    val squarePatch = File(modelsDir, "${width}.patch")
+                    val squarePatch = File(modelsDir, "$width.patch")
                     if (squarePatch.exists()) {
                         squarePatch
                     } else {
-                        File(modelsDir, "${width}x${height}.patch")
+                        File(modelsDir, "${width}x$height.patch")
                     }
                 } else {
-                    File(modelsDir, "${width}x${height}.patch")
+                    File(modelsDir, "${width}x$height.patch")
                 }
 
                 if (patchFile.exists()) {
                     command = command + listOf(
-                        "--patch", patchFile.absolutePath,
+                        "--patch",
+                        patchFile.absolutePath,
                     )
                     Log.i(TAG, "Using patch file: ${patchFile.name}")
                 } else {
                     Log.w(
                         TAG,
-                        "Patch file not found: ${patchFile.absolutePath}, falling back to 512×512"
+                        "Patch file not found: ${patchFile.absolutePath}, falling back to 512×512",
                     )
                 }
             }
             if (useImg2img) {
                 command = command + listOf(
-                    "--vae_encoder", File(modelsDir, "vae_encoder.bin").absolutePath,
+                    "--vae_encoder",
+                    File(modelsDir, "vae_encoder.bin").absolutePath,
                 )
             }
             if (File(modelsDir, "V_PRED").exists()) {
@@ -302,18 +305,19 @@ class BackendService : Service() {
                     "--tokenizer", File(modelsDir, "tokenizer.json").absolutePath,
                     "--port", "8081",
                     "--text_embedding_size", if (model.id != "sd21") "768" else "1024",
-                    "--cpu"
+                    "--cpu",
                 )
                 if (useImg2img) {
                     command = command + listOf(
-                        "--vae_encoder", File(modelsDir, "vae_encoder.mnn").absolutePath,
+                        "--vae_encoder",
+                        File(modelsDir, "vae_encoder.mnn").absolutePath,
                     )
                 }
             }
             if (BuildConfig.FLAVOR == "filter") {
                 command = command + listOf(
                     "--safety_checker",
-                    File(filesDir, "safety_checker.mnn").absolutePath
+                    File(filesDir, "safety_checker.mnn").absolutePath,
                 )
             }
             if (model.isSdxl) {
@@ -322,6 +326,9 @@ class BackendService : Service() {
                 if (lowRam) {
                     command = command + "--lowram"
                 }
+            }
+            if (listenOnAll) {
+                command = command + "--listen_all"
             }
             val env = mutableMapOf<String, String>()
 
@@ -340,7 +347,7 @@ class BackendService : Service() {
                     if (soc != null) {
                         val socPaths = listOf(
                             "/vendor/lib64/$soc",
-                            "/vendor/lib64/egl/$soc"
+                            "/vendor/lib64/egl/$soc",
                         )
 
                         socPaths.forEach { path ->
@@ -359,7 +366,7 @@ class BackendService : Service() {
             env["DSP_LIBRARY_PATH"] = runtimeDir.absolutePath
 
             Log.d(TAG, "COMMAND: ${command.joinToString(" ")}")
-            Log.d(TAG, "DIR: ${runtimeDir}")
+            Log.d(TAG, "DIR: $runtimeDir")
             Log.d(TAG, "LD_LIBRARY_PATH=${env["LD_LIBRARY_PATH"]}")
             Log.d(TAG, "DSP_LIBRARY_PATH=${env["DSP_LIBRARY_PATH"]}")
 
@@ -374,11 +381,9 @@ class BackendService : Service() {
             startMonitorThread()
 
             return true
-
         } catch (e: Exception) {
             Log.e(TAG, "backend start failed", e)
             updateState(BackendState.Error("backend start failed: ${e.message}"))
-            e.printStackTrace()
             return false
         }
     }

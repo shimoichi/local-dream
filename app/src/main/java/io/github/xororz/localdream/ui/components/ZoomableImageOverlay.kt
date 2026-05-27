@@ -3,7 +3,6 @@ package io.github.xororz.localdream.ui.components
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -14,16 +13,16 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,19 +37,15 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
 @Composable
-fun OverlayIconButton(
-    icon: ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+fun OverlayIconButton(icon: ImageVector, contentDescription: String?, onClick: () -> Unit) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
+            contentColor = Color.White,
+        ),
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = Color.White)
+        Icon(icon, contentDescription = contentDescription)
     }
 }
 
@@ -61,16 +56,16 @@ fun ZoomableImageOverlay(
     showScaleIndicator: Boolean = false,
     topEndContent: @Composable RowScope.() -> Unit = {},
 ) {
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
 
     BackHandler(onBack = onDismiss)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.9f))
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.9f))
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     val oldScale = scale
@@ -101,13 +96,15 @@ fun ZoomableImageOverlay(
                     val right = left + scaledImageSize
                     val bottom = top + scaledImageSize
 
-                    if (offset.x < left || offset.x > right ||
-                        offset.y < top || offset.y > bottom
+                    if (offset.x < left ||
+                        offset.x > right ||
+                        offset.y < top ||
+                        offset.y > bottom
                     ) {
                         onDismiss()
                     }
                 })
-            }
+            },
     ) {
         if (bitmap != null) {
             AsyncImage(
@@ -163,7 +160,7 @@ fun ZoomableImageOverlay(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 16.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
                         shape = MaterialTheme.shapes.extraSmall,
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp),

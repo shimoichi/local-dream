@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
         Index(value = ["modelId", "timestamp"]),
         Index(value = ["timestamp"]),
         Index(value = ["mode"]),
-    ]
+    ],
 )
 data class HistoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

@@ -32,6 +32,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,11 +78,11 @@ fun PromptTagTextField(
     highlightQuery: String? = null,
     maxCollapsedLines: Int = 2,
     minCollapsedLines: Int = 2,
-    minExpandedLines: Int = 3
+    minExpandedLines: Int = 3,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var anchorWidthPx by remember { mutableStateOf(0) }
-    var anchorTopPx by remember { mutableStateOf(0f) }
+    var anchorWidthPx by remember { mutableIntStateOf(0) }
+    var anchorTopPx by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
 
     Column(modifier = modifier) {
@@ -101,16 +103,16 @@ fun PromptTagTextField(
             shape = MaterialTheme.shapes.medium,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
             ),
             trailingIcon = {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 }
-            }
+            },
         )
     }
 
@@ -134,35 +136,35 @@ fun PromptTagTextField(
             popupPositionProvider = remember(statusTopPx, bottomInsetPx) {
                 AnchorPositionProvider(
                     safeTopPx = statusTopPx,
-                    bottomInsetPx = bottomInsetPx
+                    bottomInsetPx = bottomInsetPx,
                 )
             },
             properties = PopupProperties(
                 focusable = false,
                 dismissOnBackPress = true,
-                dismissOnClickOutside = false
-            )
+                dismissOnClickOutside = false,
+            ),
         ) {
             Card(
                 modifier = Modifier.width(widthDp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             ) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = maxHeightDp)
+                        .heightIn(max = maxHeightDp),
                 ) {
                     items(
                         items = suggestions,
-                        key = { it.replacementTag }
+                        key = { it.replacementTag },
                     ) { suggestion ->
                         SuggestionRow(
                             suggestion = suggestion,
                             highlightQuery = highlightQuery,
-                            onClick = { onSuggestionClick(suggestion) }
+                            onClick = { onSuggestionClick(suggestion) },
                         )
                     }
                 }
@@ -172,11 +174,7 @@ fun PromptTagTextField(
 }
 
 @Composable
-private fun SuggestionRow(
-    suggestion: TagSuggestion,
-    highlightQuery: String?,
-    onClick: () -> Unit
-) {
+private fun SuggestionRow(suggestion: TagSuggestion, highlightQuery: String?, onClick: () -> Unit) {
     // Embedding names round-trip into the prompt verbatim; spaces would break
     // the lookup in PromptProcessor (it keys on the lowercase filename stem).
     val displayPrimary = if (suggestion.matchType == TagMatchType.Embedding) {
@@ -189,7 +187,7 @@ private fun SuggestionRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
@@ -200,20 +198,19 @@ private fun SuggestionRow(
                     } else {
                         categoryColor(suggestion.category)
                     },
-                    shape = CircleShape
-                )
+                    shape = CircleShape,
+                ),
         )
         Spacer(Modifier.width(10.dp))
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = highlightSubstring(displayPrimary, highlightQuery),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             suggestion.secondaryText?.takeIf { it.isNotBlank() }?.let { secondary ->
                 Text(
@@ -221,7 +218,7 @@ private fun SuggestionRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -230,7 +227,7 @@ private fun SuggestionRow(
             Text(
                 text = formatPostCount(suggestion.postCount),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         MatchTypeBadge(suggestion.matchType)
@@ -258,23 +255,31 @@ private fun MatchTypeBadge(matchType: TagMatchType) {
     Spacer(Modifier.width(8.dp))
     Card(
         shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = container)
+        colors = CardDefaults.cardColors(containerColor = container),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = onContainer,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
         )
     }
 }
 
 @Composable
 private fun categoryColor(category: Int): Color = when (category) {
-    1 -> Color(0xFFE53935) // artist
-    3 -> Color(0xFFAB47BC) // copyright
-    4 -> Color(0xFF43A047) // character
-    5 -> Color(0xFFFB8C00) // meta
+    1 -> Color(0xFFE53935)
+
+    // artist
+    3 -> Color(0xFFAB47BC)
+
+    // copyright
+    4 -> Color(0xFF43A047)
+
+    // character
+    5 -> Color(0xFFFB8C00)
+
+    // meta
     else -> MaterialTheme.colorScheme.outline // general / unknown
 }
 
@@ -285,8 +290,7 @@ private fun formatPostCount(n: Int): String = when {
     else -> n.toString()
 }
 
-private fun normalizeForHighlight(value: String): String =
-    value.lowercase().replace(' ', '_').replace('-', '_')
+private fun normalizeForHighlight(value: String): String = value.lowercase().replace(' ', '_').replace('-', '_')
 
 private fun highlightSubstring(text: String, query: String?): AnnotatedString {
     if (query.isNullOrBlank()) return AnnotatedString(text)
@@ -305,15 +309,12 @@ private fun highlightSubstring(text: String, query: String?): AnnotatedString {
     }
 }
 
-private class AnchorPositionProvider(
-    private val safeTopPx: Int,
-    private val bottomInsetPx: Int
-) : PopupPositionProvider {
+private class AnchorPositionProvider(private val safeTopPx: Int, private val bottomInsetPx: Int) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
         windowSize: IntSize,
         layoutDirection: LayoutDirection,
-        popupContentSize: IntSize
+        popupContentSize: IntSize,
     ): IntOffset {
         val gap = 8
         // Visible bottom is the lowest screen Y that is not occluded by the IME
@@ -329,11 +330,13 @@ private class AnchorPositionProvider(
             // path; the popup never overlaps the caret because the height was
             // already capped to the available space above.
             aboveY >= safeTopPx -> aboveY
+
             // Otherwise drop below only when it fully fits inside the visible
             // region (i.e. above the keyboard / nav bar). Without this guard
             // the popup can render behind the IME on edge-to-edge windows
             // where windowSize.height is the full screen.
             belowY + popupContentSize.height <= visibleBottom -> belowY
+
             // Last resort: clamp above the field as high as the safe top allows.
             // heightIn already prevents the popup from being taller than the
             // space above, so this still avoids covering the caret.
@@ -341,7 +344,7 @@ private class AnchorPositionProvider(
         }
         val x = anchorBounds.left.coerceIn(
             0,
-            (windowSize.width - popupContentSize.width).coerceAtLeast(0)
+            (windowSize.width - popupContentSize.width).coerceAtLeast(0),
         )
         return IntOffset(x, y)
     }

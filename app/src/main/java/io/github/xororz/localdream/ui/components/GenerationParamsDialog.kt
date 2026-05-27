@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.GenerationMode
@@ -68,7 +67,6 @@ fun GenerationParamsDialog(
                     Text(
                         stringResource(R.string.basic_params),
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -98,7 +96,9 @@ fun GenerationParamsDialog(
                             R.string.basic_runtime,
                             if (params.runOnCpu) {
                                 if (params.useOpenCL) "GPU" else "CPU"
-                            } else "NPU",
+                            } else {
+                                "NPU"
+                            },
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -129,7 +129,6 @@ fun GenerationParamsDialog(
                     Text(
                         stringResource(R.string.image_prompt),
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(params.prompt, style = MaterialTheme.typography.bodyMedium)
@@ -139,7 +138,6 @@ fun GenerationParamsDialog(
                     Text(
                         stringResource(R.string.negative_prompt),
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(params.negativePrompt, style = MaterialTheme.typography.bodyMedium)

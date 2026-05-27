@@ -9,6 +9,10 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.github.xororz.localdream.R
+import java.io.File
+import java.io.FileOutputStream
+import java.util.concurrent.TimeUnit
+import java.util.zip.ZipInputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,10 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.File
-import java.io.FileOutputStream
-import java.util.concurrent.TimeUnit
-import java.util.zip.ZipInputStream
 
 class ModelDownloadService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -62,7 +62,7 @@ class ModelDownloadService : Service() {
             val modelId: String,
             val progress: Float,
             val downloadedBytes: Long,
-            val totalBytes: Long
+            val totalBytes: Long,
         ) : DownloadState()
 
         data class Extracting(val modelId: String) : DownloadState()
@@ -102,7 +102,7 @@ class ModelDownloadService : Service() {
         fileUrl: String,
         isZip: Boolean,
         isNpu: Boolean,
-        modelType: String
+        modelType: String,
     ) {
         downloadJob?.cancel()
         downloadJob = serviceScope.launch {
@@ -178,7 +178,6 @@ class ModelDownloadService : Service() {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
-
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
 
@@ -198,12 +197,7 @@ class ModelDownloadService : Service() {
         }
     }
 
-    private suspend fun downloadFile(
-        url: String,
-        destFile: File,
-        modelId: String,
-        modelName: String
-    ) = withContext(Dispatchers.IO) {
+    private suspend fun downloadFile(url: String, destFile: File, modelId: String, modelName: String) = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(url)
             .build()
@@ -232,13 +226,15 @@ class ModelDownloadService : Service() {
                             lastUpdateTime = currentTime
                             val progress = if (totalBytes > 0) {
                                 downloadedBytes.toFloat() / totalBytes
-                            } else 0f
+                            } else {
+                                0f
+                            }
 
                             _downloadState.value = DownloadState.Downloading(
                                 modelId,
                                 progress,
                                 downloadedBytes,
-                                totalBytes
+                                totalBytes,
                             )
 
                             updateNotification(modelName, progress)
@@ -249,10 +245,7 @@ class ModelDownloadService : Service() {
         }
     }
 
-    private suspend fun unzipFile(
-        zipFile: File,
-        destDir: File,
-    ) = withContext(Dispatchers.IO) {
+    private suspend fun unzipFile(zipFile: File, destDir: File) = withContext(Dispatchers.IO) {
         ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
             var entry = zis.nextEntry
 
@@ -280,17 +273,15 @@ class ModelDownloadService : Service() {
         stopSelf()
     }
 
-    private fun getModelsDir(): File {
-        return File(filesDir, "models").apply {
-            if (!exists()) mkdirs()
-        }
+    private fun getModelsDir(): File = File(filesDir, "models").apply {
+        if (!exists()) mkdirs()
     }
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             getString(R.string.model_download_channel),
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_LOW,
         ).apply {
             description = getString(R.string.model_download_channel_desc)
         }
@@ -300,7 +291,7 @@ class ModelDownloadService : Service() {
     private fun createNotification(
         modelName: String,
         progress: Float,
-        isExtracting: Boolean = false
+        isExtracting: Boolean = false,
     ): android.app.Notification {
         val title = if (isExtracting) {
             getString(R.string.extracting)
@@ -315,7 +306,7 @@ class ModelDownloadService : Service() {
             this,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
@@ -332,7 +323,7 @@ class ModelDownloadService : Service() {
         progress: Float,
         success: Boolean = false,
         error: String? = null,
-        isExtracting: Boolean = false
+        isExtracting: Boolean = false,
     ) {
         val notification = when {
             success -> {

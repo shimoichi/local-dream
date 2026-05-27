@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Local Dream</string>
     <string name="anythingv5_description">Anime Image Generation</string>
     <string name="sdxl_base_description">SDXL General Image Generation</string>
     <string name="illustriousv16_description">WAI Illustrious SDXL v16</string>
     <string name="capture_logs">ログを収集</string>
     <string name="capture_logs_hint">モデル実行中にアプリのログを収集し、終了後に表示します</string>
+    <string name="listen_on_all_addresses">LAN からのアクセスを許可</string>
+    <string name="listen_on_all_addresses_hint">同じネットワーク上の他のデバイスからバックエンド（ポート 8081）にアクセスできるようにします。オフの場合はローカルのみ。</string>
     <string name="tag_autocomplete">タグ補完</string>
     <string name="tag_autocomplete_hint">プロンプト入力中にタグを補完・修正します</string>
     <string name="tag_alias_label">別名</string>
@@ -15,11 +17,15 @@
     <string name="tag_main_dictionary_hint">未インポート。タグ辞書（danbooru.csv など）をインポートすると補完が有効になります。</string>
     <string name="tag_translation_dictionary">翻訳辞書（任意）</string>
     <string name="tag_translation_dictionary_hint">未インポート。2 列または 3 列形式の翻訳 CSV をインポートすると自分の言語で検索できます。</string>
-    <string name="tag_imported_status">%1$s · %2$d 件</string>
+    <plurals name="tag_imported_status">
+        <item quantity="other">%1$s · %2$d 件</item>
+    </plurals>
     <string name="tag_import">CSV をインポート</string>
     <string name="tag_reimport">置き換え</string>
     <string name="tag_clear">削除</string>
-    <string name="tag_import_success">%1$d 件をインポートしました</string>
+    <plurals name="tag_import_success">
+        <item quantity="other">%1$d 件をインポートしました</item>
+    </plurals>
     <string name="tag_import_failed">インポートに失敗しました</string>
     <string name="sdxl_lowram">SDXL 低メモリモード</string>
     <string name="sdxl_lowram_hint">SDXL 専用：各モデルを必要時にのみ読み込み、使用後に解放します。16GB 未満のデバイスでは有効化してください。生成途中のプレビューは無効になります。</string>
@@ -33,8 +39,21 @@
     <string name="absolutereality_description">Realistic Image Generation</string>
     <string name="backend_notify">バックエンドサービス実行中</string>
     <string name="backend_notify_title">SD モデルのバックエンド</string>
-    <string name="generating_notify">画像の生成中...</string>
+    <string name="generating_notify">画像の生成中…</string>
     <string name="settings">設定</string>
+    <string name="appearance">外観</string>
+    <string name="theme_preset">テーマカラー</string>
+    <string name="theme_preset_hint">ダイナミックカラーがオフの時に適用</string>
+    <string name="dynamic_color">ダイナミックカラー</string>
+    <string name="dynamic_color_hint">壁紙の色に合わせる (Android 12+)</string>
+    <string name="dark_mode">ダークモード</string>
+    <string name="dark_mode_system">システム</string>
+    <string name="dark_mode_light">ライト</string>
+    <string name="dark_mode_dark">ダーク</string>
+    <string name="theme_tangerine">オレンジ</string>
+    <string name="theme_forest">フォレスト</string>
+    <string name="theme_ocean">オーシャン</string>
+    <string name="theme_amber">アンバー</string>
     <string name="confirm">決定</string>
     <string name="cancel">取り消す</string>
     <string name="save">保存</string>
@@ -45,12 +64,13 @@
     <string name="delete_confirm">指定された %s のモデルを削除しますか？この操作は取り消せません！</string>
     <string name="got_it">わかった</string>
     <string name="yes">はい</string>
-    <string name="no">いいえ</string>
     <string name="about_app">重要</string>
     <string name="must_read">このアプリは、CPU/GPU および一部の Qualcomm 製 NPU 上で Stable Diffusion による画像生成を実行できます。\n\nSD1.5 モデルは、Hexagon V68 アーキテクチャ以降の Snapdragon NPU で動作します。\n\nSDXL モデルは、Snapdragon 8 Gen 3 以降のデバイスで動作します。\n\n上記に該当しないチップでは、CPU/GPU のみでの実行となります。\n\nこのプロジェクトはオープンソースで、\nhttps://github.com/xororz/local-dream\nにてソースコードの閲覧や Issue の報告ができます。</string>
     <string name="help">ヘルプ</string>
     <string name="available_models">利用可能なモデル</string>
-    <string name="selected_items">%d 選択</string>
+    <plurals name="selected_items">
+        <item quantity="other">%d 選択</item>
+    </plurals>
     <string name="download">ダウンロード</string>
     <string name="download_from">ダウンロード先</string>
     <string name="download_settings_hint">huggingface または 他のミラーのURL</string>
@@ -74,7 +94,9 @@
     <string name="show_process">生成プロセスを表示</string>
     <string name="show_process_hint">NPU モデル専用機能です。</string>
     <string name="preview_stride">プレビューストライド</string>
-    <string name="preview_stride_hint">%d ステップごとにプレビューを更新します (1 ～ 10)。</string>
+    <plurals name="preview_stride_hint">
+        <item quantity="other">%d ステップごとにプレビューを更新します (1 ～ 10)。</item>
+    </plurals>
     <string name="crop_image">画像をトリミング</string>
     <string name="crop_hint">ドラッグして切り抜き範囲を調整</string>
     <string name="set_inpaint_area">インペイント範囲を設定</string>
@@ -97,21 +119,31 @@
     <string name="history_tab">履歴</string>
     <string name="no_history">生成履歴がありません</string>
     <string name="no_history_hint">生成後に履歴が保存されます</string>
-    <string name="selected_items_count">%d 件を選択中</string>
+    <plurals name="selected_items_count">
+        <item quantity="other">%d 件を選択中</item>
+    </plurals>
     <string name="generation_params_title">生成パラメータ</string>
     <string name="delete_image">画像を削除</string>
     <string name="delete_image_confirm">この画像を削除してもよろしいですか? この操作は元に戻せません。</string>
     <string name="deleted">削除済み</string>
     <string name="delete_failed_message">削除に失敗</string>
     <string name="batch_delete">一括削除</string>
-    <string name="batch_delete_confirm">選択した画像 %d 枚を削除してもよろしいですか? この操作は元に戻せません。</string>
+    <plurals name="batch_delete_confirm">
+        <item quantity="other">選択した画像 %d 枚を削除してもよろしいですか? この操作は元に戻せません。</item>
+    </plurals>
     <string name="batch_save">一括保存</string>
-    <string name="batch_save_confirm">選択した画像 %d 枚をギャラリーに保存しますか?</string>
+    <plurals name="batch_save_confirm">
+        <item quantity="other">選択した画像 %d 枚をギャラリーに保存しますか?</item>
+    </plurals>
     <string name="batch_saving_progress">%1$d / %2$d を保存中</string>
-    <string name="saved_count">%d 枚を保存しました</string>
-    <string name="saved_count_with_failed">%1$d 枚を保存、%2$d 枚失敗</string>
-    <string name="deleted_count">%d 個のアイテムを削除しました</string>
-    <string name="deleted_count_with_failed">%1$d 個のアイテムを正常に削除しましたが、%2$d 個のアイテムは削除できませんでした</string>
+    <plurals name="saved_count">
+        <item quantity="other">%d 枚を保存しました</item>
+    </plurals>
+    <string name="saved_count_with_failed" tools:ignore="PluralsCandidate">%1$d 枚を保存、%2$d 枚失敗</string>
+    <plurals name="deleted_count">
+        <item quantity="other">%d 個のアイテムを削除しました</item>
+    </plurals>
+    <string name="deleted_count_with_failed" tools:ignore="PluralsCandidate">%1$d 個のアイテムを正常に削除しましたが、%2$d 個のアイテムは削除できませんでした</string>
     <string name="confirm_exit">閉じてよろしいですか？</string>
     <string name="confirm_exit_hint">生成中です。終了してもよろしいですか?</string>
     <string name="reset">リセット</string>
@@ -129,13 +161,13 @@
     <string name="reproduce_params_hint">プロンプトページに適用する項目を選択してください。</string>
     <string name="select_all">すべて選択</string>
     <string name="deselect_all">すべて解除</string>
-    <string name="result_params">ステップ: %s / CFG: %.1f / シード: %s</string>
-    <string name="result_params_2">サイズ: %s×%s / 処理時間: %s / %s</string>
+    <string name="result_params">ステップ: %1$s / CFG: %2$.1f / シード: %3$s</string>
+    <string name="result_params_2">サイズ: %1$s×%2$s / 処理時間: %3$s / %4$s</string>
     <string name="params_detail">パラメータの詳細</string>
     <string name="basic_params">基本パラメータ</string>
     <string name="basic_model">モデル: %s</string>
     <string name="basic_step">ステップ数: %d</string>
-    <string name="basic_size">サイズ: %dx%d</string>
+    <string name="basic_size">サイズ: %1$dx%2$d</string>
     <string name="basic_seed">シード: %s</string>
     <string name="basic_runtime">ランタイム: %s</string>
     <string name="basic_mode">モード: %s</string>
@@ -168,23 +200,24 @@
     <string name="error_request_failed">リクエスト失敗: %s</string>
     <string name="unknown_error">不明なエラー</string>
     <string name="image_saved">画像をギャラリーに保存しました</string>
-    <string name="loading_model">モデルの読み込み中...</string>
+    <string name="loading_model">モデルの読み込み中…</string>
     <string name="file_manager">ファイル管理</string>
     <string name="delete_file">ファイルを削除</string>
     <string name="delete_file_confirm">ファイル「%s」を削除してもよろしいですか?</string>
     <string name="file_deleted">ファイルが正常に削除されました</string>
     <string name="no_model_files">モデルが見当たりません</string>
-    <string name="loading_files">ファイルを読み込み中...</string>
+    <string name="loading_files">ファイルを読み込み中…</string>
     <string name="back_to_folders">フォルダに戻る</string>
     <string name="model_folder">モデル: %s</string>
-    <string name="file_count">%dのファイル</string>
+    <plurals name="file_count">
+        <item quantity="other">%dのファイル</item>
+    </plurals>
     <string name="clear_cache">キャッシュを消去</string>
     <string name="clear_cache_with_size">キャッシュを消去 (%s)</string>
     <string name="clear_cache_confirm">このモデルのキャッシュディレクトリを消去しますか？プロンプトキャッシュと OpenCL キャッシュは次回使用時に再生成されます。</string>
     <string name="cache_cleared">キャッシュを消去しました</string>
     <string name="download_source">ダウンロード先</string>
     <string name="feature_settings">機能設定</string>
-    <string name="file_management">ファイル管理</string>
     <string name="add_custom_model">カスタムモデルを追加</string>
     <string name="add_custom_npu_model">カスタムNPUモデルを追加</string>
     <string name="custom_model">カスタムモデル</string>
@@ -198,7 +231,7 @@
     <string name="add_model">モデルを追加</string>
     <string name="custom_model_hint">SD1.5アーキテクチャセーフテンソルモデルファイルのみをサポートします</string>
     <string name="custom_npu_model_hint">NPUモデルファイルを含むZIPファイルを選択してください。Qualcommデバイスでのみ利用可能です。</string>
-    <string name="converting">変換中...</string>
+    <string name="converting">変換中…</string>
     <string name="model_conversion_success">モデル変換完了!</string>
     <string name="model_conversion_failed">変換に失敗しました: %s</string>
     <string name="npu_model_added_success">NPUモデルの追加に成功しました！</string>
@@ -215,7 +248,6 @@
     <string name="selected_lora_files">選択したLoRAファイル：</string>
     <string name="copying_lora_files">LoRAファイルをコピー…</string>
     <string name="lora_weight">重み：</string>
-    <string name="embedding_management">埋め込み管理</string>
     <string name="embedding_manager">埋め込みマネージャー</string>
     <string name="no_embeddings">埋め込みファイルが見つかりません</string>
     <string name="import_embedding">埋め込みのインポート</string>
