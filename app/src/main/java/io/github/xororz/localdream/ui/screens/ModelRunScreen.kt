@@ -3326,7 +3326,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                                     LocalContext.current,
                                                 )
                                                     .data(item.imageFile)
-                                                    .size(72)
+                                                    .crossfade(true)
                                                     .build(),
                                                 contentDescription = "thumb",
                                                 modifier = Modifier.fillMaxSize(),
