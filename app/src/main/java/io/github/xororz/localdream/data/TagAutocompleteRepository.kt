@@ -12,6 +12,7 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -721,6 +722,174 @@ class TagAutocompleteRepository private constructor(private val context: Context
             val replacement = core + separator
             val updated = prefix + replacement + suffix.trimStart()
             return updated to (prefix.length + replacement.length)
+        }
+
+        // The comma-delimited segment under the caret, with leading/trailing
+        // whitespace stripped from its bounds. Unlike extractActiveTag (which
+        // stops at the caret for completion) this spans the whole segment so the
+        // toolbar actions operate on the full tag, weight wrapper included.
+        private data class TagSegment(val start: Int, val end: Int, val content: String)
+
+        private fun segmentBetween(text: String, rawStart: Int, rawEnd: Int): TagSegment? {
+            var start = rawStart
+            while (start < rawEnd && text[start].isWhitespace()) start++
+            var end = rawEnd
+            while (end > start && text[end - 1].isWhitespace()) end--
+            if (start >= end) return null
+            return TagSegment(start, end, text.substring(start, end))
+        }
+
+        private fun activeTagSegment(text: String, selection: Int): TagSegment? {
+            if (selection < 0 || selection > text.length) return null
+            val segmentStart = text.lastIndexOf(',', startIndex = selection - 1).let {
+                if (it == -1) 0 else it + 1
+            }
+            val segmentEnd = text.indexOf(',', startIndex = selection).let {
+                if (it == -1) text.length else it
+            }
+            return segmentBetween(text, segmentStart, segmentEnd)
+        }
+
+        // Like activeTagSegment, but when the caret sits in an empty slot (e.g.
+        // right after the ", " that a completion just inserted) it falls back to
+        // the previous, completed tag. This lets the weight/clear actions target
+        // the tag the user just picked instead of doing nothing.
+        private fun resolveTagSegment(text: String, selection: Int): TagSegment? {
+            activeTagSegment(text, selection)?.let { return it }
+            if (selection <= 0 || selection > text.length) return null
+            val prevComma = text.lastIndexOf(',', startIndex = selection - 1)
+            if (prevComma < 0) return null
+            val start = text.lastIndexOf(',', startIndex = prevComma - 1).let {
+                if (it == -1) 0 else it + 1
+            }
+            return segmentBetween(text, start, prevComma)
+        }
+
+        // Explicit "(tag:weight)" attention form, e.g. "(masterpiece:1.2)".
+        private val explicitWeightRegex = Regex("""^\((.*):(-?\d+(?:\.\d+)?)\)$""")
+
+        // True when `s` is fully enclosed by one matching open/close pair, honoring
+        // backslash escapes so a tag's literal "\(...\)" is not mistaken for a
+        // weighting group.
+        private fun isBalancedWrap(s: String, open: Char, close: Char): Boolean {
+            if (s.length < 2 || s.first() != open || s.last() != close) return false
+            var depth = 0
+            var i = 0
+            while (i < s.length) {
+                val c = s[i]
+                when {
+                    // A backslash escapes the next character, so skip the pair.
+                    c == '\\' -> i++
+
+                    c == open -> depth++
+
+                    c == close -> {
+                        depth--
+                        if (depth == 0 && i != s.length - 1) return false
+                    }
+                }
+                i++
+            }
+            return depth == 0
+        }
+
+        private fun roundToTenth(value: Double): Double = Math.round(value * 10.0) / 10.0
+
+        // Resolves a tag segment into its bare inner text and an effective weight,
+        // understanding the A1111 shorthands as well as the explicit form:
+        //   "(tag)"   -> 1.1   "((tag))" -> 1.2   (each '()' layer is +0.1)
+        //   "[tag]"   -> 0.9   "[[tag]]" -> 0.8   (each '[]' layer is -0.1)
+        //   "(tag:n)" -> n
+        // Layers are peeled outermost-first; an explicit weight short-circuits.
+        private fun parseWeightedTag(content: String): Pair<String, Double> {
+            var inner = content.trim()
+            var delta = 0.0
+            while (true) {
+                val match = explicitWeightRegex.matchEntire(inner)
+                if (match != null) {
+                    val body = match.groupValues[1]
+                    val weight = match.groupValues[2].toDoubleOrNull()
+                    if (body.isNotEmpty() && weight != null) {
+                        return body to roundToTenth(weight + delta)
+                    }
+                }
+                when {
+                    isBalancedWrap(inner, '(', ')') -> delta += 0.1
+                    isBalancedWrap(inner, '[', ']') -> delta -= 0.1
+                    else -> return inner to roundToTenth(1.0 + delta)
+                }
+                inner = inner.substring(1, inner.length - 1).trim()
+            }
+        }
+
+        // One decimal place with a '.' separator regardless of locale, so the
+        // prompt parser reads the weight back correctly.
+        private fun formatTagWeight(weight: Double): String = String.format(Locale.US, "%.1f", weight)
+
+        // Wraps (or rewraps) the active tag with an adjusted attention weight,
+        // stepping by `delta`. A1111 shorthand wrappers are normalized to the
+        // explicit form; when the weight lands back on 1.0 the wrapper is dropped
+        // so the tag returns to its bare text.
+        fun adjustActiveTagWeight(text: String, selection: Int, delta: Double): Pair<String, Int>? {
+            val segment = resolveTagSegment(text, selection) ?: return null
+            val (inner, weight) = parseWeightedTag(segment.content)
+            val newWeight = roundToTenth(weight + delta)
+            val replacement = if (newWeight == 1.0) inner else "($inner:${formatTagWeight(newWeight)})"
+            val updated = text.substring(0, segment.start) + replacement + text.substring(segment.end)
+            val lengthDelta = replacement.length - (segment.end - segment.start)
+            // Keep the caret where it was: anchored to the tag's end when it sat
+            // inside the tag, or shifted by the edit when it sat in a later slot.
+            val newSelection = if (selection in segment.start..segment.end) {
+                segment.start + replacement.length
+            } else {
+                (selection + lengthDelta).coerceIn(0, updated.length)
+            }
+            return updated to newSelection
+        }
+
+        // Removes the tag under the caret together with one adjacent comma. When
+        // the caret instead sits in an empty slot (e.g. the ", " a just-added tag
+        // created), it collapses that slot rather than reaching back and deleting
+        // the previous, intact tag (which would be a destructive surprise).
+        fun clearActiveTag(text: String, selection: Int): Pair<String, Int>? {
+            val segment = activeTagSegment(text, selection)
+            if (segment != null) {
+                val commaBefore = text.lastIndexOf(',', startIndex = segment.start - 1)
+                val commaAfter = text.indexOf(',', startIndex = segment.end)
+                return when {
+                    commaBefore >= 0 -> {
+                        val prefix = text.substring(0, commaBefore)
+                        val suffix = if (commaAfter >= 0) text.substring(commaAfter) else ""
+                        (prefix + suffix) to prefix.length
+                    }
+
+                    commaAfter >= 0 -> text.substring(commaAfter + 1).trimStart() to 0
+
+                    else -> "" to 0
+                }
+            }
+            if (selection < 0 || selection > text.length) return null
+            val prevComma = text.lastIndexOf(',', startIndex = selection - 1)
+            val nextComma = text.indexOf(',', startIndex = selection)
+            return when {
+                prevComma >= 0 -> {
+                    val end = if (nextComma >= 0) nextComma else text.length
+                    text.removeRange(prevComma, end) to prevComma
+                }
+
+                nextComma >= 0 -> text.substring(nextComma + 1).trimStart() to 0
+
+                else -> null
+            }
+        }
+
+        // Inserts ", " right after the active tag and drops the caret into the
+        // fresh, empty slot so the user can start typing the next tag.
+        fun appendTagAfterActive(text: String, selection: Int): Pair<String, Int>? {
+            val segment = activeTagSegment(text, selection) ?: return null
+            val insertion = ", "
+            val updated = text.substring(0, segment.end) + insertion + text.substring(segment.end)
+            return updated to (segment.end + insertion.length)
         }
     }
 }

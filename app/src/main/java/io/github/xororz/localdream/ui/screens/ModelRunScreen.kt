@@ -133,6 +133,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -229,6 +230,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+
+// Prompt undo/redo: cap on stored steps, and the window within which continuous
+// typing collapses into a single step.
+private const val HISTORY_LIMIT = 100
+private const val HISTORY_COALESCE_MS = 600L
 
 private fun checkStoragePermission(context: Context): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
     true // Android 10
@@ -529,6 +535,18 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     var negativePromptActiveQuery by remember { mutableStateOf<String?>(null) }
     var isPromptFocused by remember { mutableStateOf(false) }
     var isNegativePromptFocused by remember { mutableStateOf(false) }
+    // Undo/redo history of the prompt text. Rapid typing coalesces into a single
+    // step; suggestion picks and toolbar edits are discrete steps.
+    var promptUndoStack by remember { mutableStateOf<List<String>>(emptyList()) }
+    var promptRedoStack by remember { mutableStateOf<List<String>>(emptyList()) }
+    var promptHistoryAt by remember { mutableLongStateOf(0L) }
+    var negativePromptUndoStack by remember { mutableStateOf<List<String>>(emptyList()) }
+    var negativePromptRedoStack by remember { mutableStateOf<List<String>>(emptyList()) }
+    var negativePromptHistoryAt by remember { mutableLongStateOf(0L) }
+    // Set when the back gesture dismisses the popup; reset on the next edit so the
+    // popup stays closed until the user actually does something again.
+    var promptPopupDismissed by remember { mutableStateOf(false) }
+    var negativePromptPopupDismissed by remember { mutableStateOf(false) }
     var cfg by remember { mutableFloatStateOf(7f) }
     var steps by remember { mutableFloatStateOf(20f) }
     var seed by remember { mutableStateOf("") }
@@ -801,9 +819,31 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         return (prefix + contains).take(limit)
     }
 
-    fun updatePromptField(value: TextFieldValue) {
-        val textChanged = value.text != promptFieldValue.text
+    // Records `snapshot` as an undo checkpoint. Continuous typing within the
+    // coalesce window collapses into one step; discrete edits (suggestion picks,
+    // toolbar actions) pass coalesce = false to always start a new step.
+    fun pushPromptHistory(snapshot: String, coalesce: Boolean) {
+        val now = System.currentTimeMillis()
+        val skip = coalesce && promptUndoStack.isNotEmpty() && now - promptHistoryAt < HISTORY_COALESCE_MS
+        if (!skip) {
+            promptUndoStack = (promptUndoStack + snapshot).takeLast(HISTORY_LIMIT)
+        }
+        promptRedoStack = emptyList()
+        // Discrete edits leave the window closed so the next keystroke opens a
+        // fresh step instead of merging into the discrete one.
+        promptHistoryAt = if (coalesce) now else 0L
+    }
+
+    fun updatePromptField(value: TextFieldValue, recordHistory: Boolean = true) {
+        val previousText = promptFieldValue.text
+        val textChanged = value.text != previousText
         val selectionChanged = value.selection != promptFieldValue.selection
+        if (textChanged && recordHistory) {
+            pushPromptHistory(previousText, coalesce = true)
+        }
+        if (textChanged || selectionChanged) {
+            promptPopupDismissed = false
+        }
         promptFieldValue = value
         if (textChanged) {
             prompt = value.text
@@ -836,9 +876,27 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         }
     }
 
-    fun updateNegativePromptField(value: TextFieldValue) {
-        val textChanged = value.text != negativePromptFieldValue.text
+    fun pushNegativePromptHistory(snapshot: String, coalesce: Boolean) {
+        val now = System.currentTimeMillis()
+        val skip = coalesce && negativePromptUndoStack.isNotEmpty() &&
+            now - negativePromptHistoryAt < HISTORY_COALESCE_MS
+        if (!skip) {
+            negativePromptUndoStack = (negativePromptUndoStack + snapshot).takeLast(HISTORY_LIMIT)
+        }
+        negativePromptRedoStack = emptyList()
+        negativePromptHistoryAt = if (coalesce) now else 0L
+    }
+
+    fun updateNegativePromptField(value: TextFieldValue, recordHistory: Boolean = true) {
+        val previousText = negativePromptFieldValue.text
+        val textChanged = value.text != previousText
         val selectionChanged = value.selection != negativePromptFieldValue.selection
+        if (textChanged && recordHistory) {
+            pushNegativePromptHistory(previousText, coalesce = true)
+        }
+        if (textChanged || selectionChanged) {
+            negativePromptPopupDismissed = false
+        }
         negativePromptFieldValue = value
         if (textChanged) {
             negativePrompt = value.text
@@ -870,6 +928,9 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     }
 
     fun applyPromptSuggestion(suggestion: TagSuggestion) {
+        // Discrete history step so an accidental pick can be undone. The popup is
+        // left up (suggestions cleared, but the toolbar persists) for follow-up.
+        pushPromptHistory(promptFieldValue.text, coalesce = false)
         val (updatedText, updatedSelection) = TagAutocompleteRepository.applySuggestion(
             promptFieldValue.text,
             promptFieldValue.selection.start,
@@ -879,10 +940,12 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         promptFieldValue = TextFieldValue(updatedText, TextRange(updatedSelection))
         promptSuggestions = emptyList()
         promptActiveQuery = null
+        promptPopupDismissed = false
         saveAllFields()
     }
 
     fun applyNegativePromptSuggestion(suggestion: TagSuggestion) {
+        pushNegativePromptHistory(negativePromptFieldValue.text, coalesce = false)
         val (updatedText, updatedSelection) = TagAutocompleteRepository.applySuggestion(
             negativePromptFieldValue.text,
             negativePromptFieldValue.selection.start,
@@ -892,7 +955,85 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         negativePromptFieldValue = TextFieldValue(updatedText, TextRange(updatedSelection))
         negativePromptSuggestions = emptyList()
         negativePromptActiveQuery = null
+        negativePromptPopupDismissed = false
         saveAllFields()
+    }
+
+    // Runs one of the suggestion-toolbar text edits against the prompt field as a
+    // discrete undo step, then routes the result back through updatePromptField so
+    // the suggestions (and the popup) refresh against the new caret position.
+    fun runPromptTagAction(action: (String, Int) -> Pair<String, Int>?) {
+        val (updatedText, updatedSelection) = action(
+            promptFieldValue.text,
+            promptFieldValue.selection.start,
+        ) ?: return
+        pushPromptHistory(promptFieldValue.text, coalesce = false)
+        updatePromptField(
+            TextFieldValue(updatedText, TextRange(updatedSelection)),
+            recordHistory = false,
+        )
+    }
+
+    fun runNegativePromptTagAction(action: (String, Int) -> Pair<String, Int>?) {
+        val (updatedText, updatedSelection) = action(
+            negativePromptFieldValue.text,
+            negativePromptFieldValue.selection.start,
+        ) ?: return
+        pushNegativePromptHistory(negativePromptFieldValue.text, coalesce = false)
+        updateNegativePromptField(
+            TextFieldValue(updatedText, TextRange(updatedSelection)),
+            recordHistory = false,
+        )
+    }
+
+    fun undoPrompt() {
+        if (promptUndoStack.isEmpty()) return
+        val previous = promptUndoStack.last()
+        promptUndoStack = promptUndoStack.dropLast(1)
+        promptRedoStack = (promptRedoStack + promptFieldValue.text).takeLast(HISTORY_LIMIT)
+        promptHistoryAt = 0L
+        updatePromptField(
+            TextFieldValue(previous, TextRange(previous.length)),
+            recordHistory = false,
+        )
+    }
+
+    fun redoPrompt() {
+        if (promptRedoStack.isEmpty()) return
+        val next = promptRedoStack.last()
+        promptRedoStack = promptRedoStack.dropLast(1)
+        promptUndoStack = (promptUndoStack + promptFieldValue.text).takeLast(HISTORY_LIMIT)
+        promptHistoryAt = 0L
+        updatePromptField(
+            TextFieldValue(next, TextRange(next.length)),
+            recordHistory = false,
+        )
+    }
+
+    fun undoNegativePrompt() {
+        if (negativePromptUndoStack.isEmpty()) return
+        val previous = negativePromptUndoStack.last()
+        negativePromptUndoStack = negativePromptUndoStack.dropLast(1)
+        negativePromptRedoStack =
+            (negativePromptRedoStack + negativePromptFieldValue.text).takeLast(HISTORY_LIMIT)
+        negativePromptHistoryAt = 0L
+        updateNegativePromptField(
+            TextFieldValue(previous, TextRange(previous.length)),
+            recordHistory = false,
+        )
+    }
+
+    fun redoNegativePrompt() {
+        if (negativePromptRedoStack.isEmpty()) return
+        val next = negativePromptRedoStack.last()
+        negativePromptRedoStack = negativePromptRedoStack.dropLast(1)
+        negativePromptUndoStack =
+            (negativePromptUndoStack + negativePromptFieldValue.text).takeLast(HISTORY_LIMIT)
+        negativePromptHistoryAt = 0L
+        updateNegativePromptField(
+            TextFieldValue(next, TextRange(next.length)),
+            recordHistory = false,
+        )
     }
 
     val onBatchCountsChange = remember {
@@ -2436,14 +2577,39 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                             },
                             suggestions = promptSuggestions,
                             onSuggestionClick = ::applyPromptSuggestion,
-                            showSuggestions = tagAutocompleteAvailable && isPromptFocused,
+                            showSuggestions = tagAutocompleteAvailable && isPromptFocused &&
+                                !promptPopupDismissed,
+                            // Toolbar stays up even on an empty prompt so undo/redo
+                            // remain reachable.
+                            showToolbar = tagAutocompleteAvailable && isPromptFocused &&
+                                !promptPopupDismissed,
                             highlightQuery = promptActiveQuery,
                             overflowOffset = promptOverflowOffset,
                             onFocusChanged = {
                                 isPromptFocused = it
                                 if (!it) promptSuggestions = emptyList()
                             },
-                            onDismissSuggestions = { promptSuggestions = emptyList() },
+                            onDismissSuggestions = { promptPopupDismissed = true },
+                            onUndo = ::undoPrompt,
+                            onRedo = ::redoPrompt,
+                            undoEnabled = promptUndoStack.isNotEmpty(),
+                            redoEnabled = promptRedoStack.isNotEmpty(),
+                            onAddTag = {
+                                runPromptTagAction(TagAutocompleteRepository::appendTagAfterActive)
+                            },
+                            onClearTag = {
+                                runPromptTagAction(TagAutocompleteRepository::clearActiveTag)
+                            },
+                            onIncreaseWeight = {
+                                runPromptTagAction { text, sel ->
+                                    TagAutocompleteRepository.adjustActiveTagWeight(text, sel, 0.1)
+                                }
+                            },
+                            onDecreaseWeight = {
+                                runPromptTagAction { text, sel ->
+                                    TagAutocompleteRepository.adjustActiveTagWeight(text, sel, -0.1)
+                                }
+                            },
                         )
 
                         PromptTagTextField(
@@ -2460,14 +2626,41 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                             },
                             suggestions = negativePromptSuggestions,
                             onSuggestionClick = ::applyNegativePromptSuggestion,
-                            showSuggestions = tagAutocompleteAvailable && isNegativePromptFocused,
+                            showSuggestions = tagAutocompleteAvailable && isNegativePromptFocused &&
+                                !negativePromptPopupDismissed,
+                            showToolbar = tagAutocompleteAvailable && isNegativePromptFocused &&
+                                !negativePromptPopupDismissed,
                             highlightQuery = negativePromptActiveQuery,
                             overflowOffset = negativePromptOverflowOffset,
                             onFocusChanged = {
                                 isNegativePromptFocused = it
                                 if (!it) negativePromptSuggestions = emptyList()
                             },
-                            onDismissSuggestions = { negativePromptSuggestions = emptyList() },
+                            onDismissSuggestions = { negativePromptPopupDismissed = true },
+                            onUndo = ::undoNegativePrompt,
+                            onRedo = ::redoNegativePrompt,
+                            undoEnabled = negativePromptUndoStack.isNotEmpty(),
+                            redoEnabled = negativePromptRedoStack.isNotEmpty(),
+                            onAddTag = {
+                                runNegativePromptTagAction(
+                                    TagAutocompleteRepository::appendTagAfterActive,
+                                )
+                            },
+                            onClearTag = {
+                                runNegativePromptTagAction(
+                                    TagAutocompleteRepository::clearActiveTag,
+                                )
+                            },
+                            onIncreaseWeight = {
+                                runNegativePromptTagAction { text, sel ->
+                                    TagAutocompleteRepository.adjustActiveTagWeight(text, sel, 0.1)
+                                }
+                            },
+                            onDecreaseWeight = {
+                                runNegativePromptTagAction { text, sel ->
+                                    TagAutocompleteRepository.adjustActiveTagWeight(text, sel, -0.1)
+                                }
+                            },
                         )
 
                         Button(
@@ -3061,26 +3254,29 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                 }
                             }
 
-                            AnimatedContent(
-                                targetState = imageVersion to currentBitmap,
-                                transitionSpec = {
-                                    fadeIn(animationSpec = Motion.Fade) togetherWith
-                                        fadeOut(animationSpec = Motion.FadeOut)
-                                },
-                                label = "ImagePreviewCrossfade",
-                            ) { (_, bitmap) ->
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .aspectRatio(1f)
-                                        .clickable {
-                                            if (bitmap != null) {
-                                                isPreviewMode = true
-                                            }
-                                        },
-                                    shape = MaterialTheme.shapes.medium,
-                                    shadowElevation = 4.dp,
-                                ) {
+                            // The shadowed Surface stays outside AnimatedContent: a
+                            // drop shadow rendered inside the crossfade's alpha layer
+                            // composites with a rectangular outline and flashes square
+                            // corners. Keeping it static lets only the image crossfade,
+                            // clipped to the rounded shape.
+                            Surface(
+                                onClick = { isPreviewMode = true },
+                                enabled = currentBitmap != null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f),
+                                shape = MaterialTheme.shapes.medium,
+                                shadowElevation = 4.dp,
+                            ) {
+                                AnimatedContent(
+                                    targetState = imageVersion to currentBitmap,
+                                    modifier = Modifier.fillMaxSize(),
+                                    transitionSpec = {
+                                        fadeIn(animationSpec = Motion.Fade) togetherWith
+                                            fadeOut(animationSpec = Motion.FadeOut)
+                                    },
+                                    label = "ImagePreviewCrossfade",
+                                ) { (_, bitmap) ->
                                     bitmap?.let {
                                         AsyncImage(
                                             model = ImageRequest.Builder(
@@ -3370,9 +3566,16 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                             val item = historyItems[index]
                             val isSelected = selectedItems.contains(item)
                             Card(
-                                modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .combinedClickable(
+                                modifier = Modifier.aspectRatio(1f),
+                                shape = MaterialTheme.shapes.medium,
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp,
+                                ),
+                            ) {
+                                // Clickable inside the card so its ripple is clipped
+                                // to the rounded shape (square corners otherwise).
+                                Box(
+                                    modifier = Modifier.combinedClickable(
                                         onClick = {
                                             if (isSelectionMode) {
                                                 // Toggle selection
@@ -3398,12 +3601,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                             }
                                         },
                                     ),
-                                shape = MaterialTheme.shapes.medium,
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 2.dp,
-                                ),
-                            ) {
-                                Box {
+                                ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
                                             .data(item.imageFile)

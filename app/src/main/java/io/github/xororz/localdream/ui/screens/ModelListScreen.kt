@@ -1678,16 +1678,7 @@ fun ModelCard(
     }
 
     ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {
-                    if (!isSelectionMode || model.isDownloaded) onClick()
-                },
-                onLongClick = {
-                    if (model.isDownloaded && !isSelectionMode) onLongClick()
-                },
-            ),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
             containerColor = backgroundColor,
             contentColor = primaryContent,
@@ -1697,7 +1688,21 @@ fun ModelCard(
         ),
         shape = MaterialTheme.shapes.large,
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        // The clickable lives inside the card so its press/ripple indication is
+        // clipped to the card's rounded shape. On the outer modifier the ripple
+        // would render as a rectangle and show square corners on long-press.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        if (!isSelectionMode || model.isDownloaded) onClick()
+                    },
+                    onLongClick = {
+                        if (model.isDownloaded && !isSelectionMode) onLongClick()
+                    },
+                ),
+        ) {
             Badge(
                 modifier = Modifier
                     .align(Alignment.TopEnd)

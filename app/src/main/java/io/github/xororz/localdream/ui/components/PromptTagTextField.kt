@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
@@ -22,15 +25,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -72,6 +84,10 @@ import io.github.xororz.localdream.data.TagMatchType
 import io.github.xororz.localdream.data.TagSuggestion
 import io.github.xororz.localdream.data.tagUnderscoresToSpaces
 
+// Fixed height of the pinned action toolbar, subtracted from the suggestion
+// list's height budget so the popup as a whole stays the same size as before.
+private val SuggestionToolbarHeight = 52.dp
+
 @Composable
 fun PromptTagTextField(
     value: TextFieldValue,
@@ -84,6 +100,15 @@ fun PromptTagTextField(
     showSuggestions: Boolean = true,
     onFocusChanged: (Boolean) -> Unit = {},
     onDismissSuggestions: () -> Unit = {},
+    showToolbar: Boolean = false,
+    onAddTag: () -> Unit = {},
+    onClearTag: () -> Unit = {},
+    onIncreaseWeight: () -> Unit = {},
+    onDecreaseWeight: () -> Unit = {},
+    onUndo: () -> Unit = {},
+    onRedo: () -> Unit = {},
+    undoEnabled: Boolean = false,
+    redoEnabled: Boolean = false,
     highlightQuery: String? = null,
     overflowOffset: Int = -1,
     maxCollapsedLines: Int = 2,
@@ -147,18 +172,22 @@ fun PromptTagTextField(
         )
     }
 
-    if (showSuggestions && suggestions.isNotEmpty() && anchorWidthPx > 0) {
+    // The popup stays up for the toolbar even once the dictionary has no matches
+    // (e.g. right after a completion is applied, or after a weight is wrapped),
+    // so it does not blink away between edits.
+    if (showSuggestions && (suggestions.isNotEmpty() || showToolbar) && anchorWidthPx > 0) {
         // Back gesture closes the suggestion popup. The Popup itself is not
         // focusable (so it never steals IME focus), so dismissOnBackPress never
         // fires; this BackHandler is what actually catches the gesture.
         BackHandler(enabled = true) { onDismissSuggestions() }
 
-        // Reset the scroll to the top whenever the active query changes, so the
-        // best match is always the first row the user sees. Without this the
-        // LazyColumn keeps its previous scroll offset and a freshly promoted
-        // top match can end up scrolled off-screen.
+        // Reset the scroll to the top whenever the suggestion list changes. This
+        // has to fire after the new list is applied: LazyColumn keyed items keep
+        // the previously-anchored row pinned, so a freshly promoted top match
+        // (e.g. "underwater" overtaking "underwear") would otherwise stay scrolled
+        // off the top of the viewport.
         val listState = rememberLazyListState()
-        LaunchedEffect(highlightQuery) {
+        LaunchedEffect(suggestions) {
             listState.scrollToItem(0)
         }
 
@@ -174,9 +203,12 @@ fun PromptTagTextField(
 
         // Space above the field that is actually visible (excludes the status bar).
         val availableAbovePx = (anchorTopPx - statusTopPx - gapPx).coerceAtLeast(0f)
-        val maxHeightDp = with(density) {
-            minOf(280.dp, availableAbovePx.toDp())
-        }
+        // The toolbar and its divider are fixed chrome on top of the list, so the
+        // list cap is the original budget minus that chrome. This keeps the total
+        // popup height unchanged from before the toolbar existed, so it still
+        // never covers the prompt text above the field.
+        val capDp = with(density) { minOf(280.dp, availableAbovePx.toDp()) }
+        val maxHeightDp = (capDp - SuggestionToolbarHeight - 1.dp).coerceAtLeast(0.dp)
         Popup(
             popupPositionProvider = remember(statusTopPx, bottomInsetPx) {
                 AnchorPositionProvider(
@@ -197,24 +229,139 @@ fun PromptTagTextField(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = maxHeightDp),
-                ) {
-                    items(
-                        items = suggestions,
-                        key = { it.replacementTag },
-                    ) { suggestion ->
-                        SuggestionRow(
-                            suggestion = suggestion,
-                            highlightQuery = highlightQuery,
-                            onClick = { onSuggestionClick(suggestion) },
-                        )
+                // Fixed action row pinned above the scrolling list so the actions
+                // stay reachable no matter how far the user scrolls.
+                TagActionToolbar(
+                    onAddTag = onAddTag,
+                    onClearTag = onClearTag,
+                    onIncreaseWeight = onIncreaseWeight,
+                    onDecreaseWeight = onDecreaseWeight,
+                    onUndo = onUndo,
+                    onRedo = onRedo,
+                    undoEnabled = undoEnabled,
+                    redoEnabled = redoEnabled,
+                )
+                if (suggestions.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = maxHeightDp),
+                    ) {
+                        items(
+                            items = suggestions,
+                            key = { it.replacementTag },
+                        ) { suggestion ->
+                            SuggestionRow(
+                                suggestion = suggestion,
+                                highlightQuery = highlightQuery,
+                                onClick = { onSuggestionClick(suggestion) },
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TagActionToolbar(
+    onAddTag: () -> Unit,
+    onClearTag: () -> Unit,
+    onIncreaseWeight: () -> Unit,
+    onDecreaseWeight: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    undoEnabled: Boolean,
+    redoEnabled: Boolean,
+) {
+    // Three tonal groups read apart at a glance: tag edits (secondary), weight
+    // steps (tertiary) and the undo/redo history (primary). This mirrors the MD3
+    // Expressive button-group look without depending on experimental APIs.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(SuggestionToolbarHeight)
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ToolbarAction(
+            icon = Icons.Default.Add,
+            contentDescription = "add tag",
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            onColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            onClick = onAddTag,
+        )
+        ToolbarAction(
+            icon = Icons.Default.Backspace,
+            contentDescription = "clear tag",
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            onColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            onClick = onClearTag,
+        )
+        ToolbarAction(
+            icon = Icons.Default.ArrowUpward,
+            contentDescription = "increase weight",
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            onColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onIncreaseWeight,
+        )
+        ToolbarAction(
+            icon = Icons.Default.ArrowDownward,
+            contentDescription = "decrease weight",
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            onColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onDecreaseWeight,
+        )
+        ToolbarAction(
+            icon = Icons.AutoMirrored.Filled.Undo,
+            contentDescription = "undo",
+            container = MaterialTheme.colorScheme.primaryContainer,
+            onColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onUndo,
+            enabled = undoEnabled,
+        )
+        ToolbarAction(
+            icon = Icons.AutoMirrored.Filled.Redo,
+            contentDescription = "redo",
+            container = MaterialTheme.colorScheme.primaryContainer,
+            onColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onRedo,
+            enabled = redoEnabled,
+        )
+    }
+}
+
+@Composable
+private fun RowScope.ToolbarAction(
+    icon: ImageVector,
+    contentDescription: String,
+    container: Color,
+    onColor: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val disabledAlpha = 0.38f
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .padding(vertical = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        color = if (enabled) container else container.copy(alpha = disabledAlpha),
+        contentColor = if (enabled) onColor else onColor.copy(alpha = disabledAlpha),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
