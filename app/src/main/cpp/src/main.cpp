@@ -260,6 +260,73 @@ QnnFunctionPointers g_qnnSystemFuncs;
 std::string g_backendPathCmd;
 
 // Returns "{model_dir}/cache", creating it if needed. Returns "" when
+// Count the UTF-16 code units in the first byteOffset bytes of a UTF-8 string.
+// The prompt is a Kotlin String on the client, indexed in UTF-16 units, so a
+// raw byte offset must be converted before it can address a character there.
+static int utf8ByteOffsetToUtf16(const std::string &s, size_t byteOffset) {
+  int units = 0;
+  size_t i = 0;
+  size_t limit = std::min(byteOffset, s.size());
+  while (i < limit) {
+    unsigned char c = static_cast<unsigned char>(s[i]);
+    int len;
+    if (c < 0x80)
+      len = 1;
+    else if ((c >> 5) == 0x6)
+      len = 2;
+    else if ((c >> 4) == 0xE)
+      len = 3;
+    else if ((c >> 3) == 0x1E)
+      len = 4;
+    else
+      len = 1;  // invalid lead byte; advance one to stay in sync
+    units += (len == 4) ? 2 : 1;  // astral planes need a surrogate pair
+    i += len;
+  }
+  return units;
+}
+
+// Byte length of the longest character-aligned prefix of `text` whose CLIP
+// encoding fits within `budget` tokens. Lets the overflow boundary land on a
+// sub-word edge inside a long token (e.g. a run of digits) instead of greying
+// the whole token. BPE token counts are non-decreasing as the prefix grows, so
+// a binary search over character boundaries is valid.
+static size_t prefixBytesWithinBudget(const std::string &text, int budget,
+                                      tokenizers::Tokenizer *tok) {
+  if (budget <= 0 || text.empty()) return 0;
+  std::vector<size_t> bounds;  // byte offset of each character start, plus end
+  for (size_t i = 0; i < text.size();) {
+    bounds.push_back(i);
+    unsigned char c = static_cast<unsigned char>(text[i]);
+    int len;
+    if (c < 0x80)
+      len = 1;
+    else if ((c >> 5) == 0x6)
+      len = 2;
+    else if ((c >> 4) == 0xE)
+      len = 3;
+    else if ((c >> 3) == 0x1E)
+      len = 4;
+    else
+      len = 1;
+    i += len;
+  }
+  bounds.push_back(text.size());
+
+  int lo = 0, hi = static_cast<int>(bounds.size()) - 1, best = 0;
+  while (lo <= hi) {
+    int mid = (lo + hi) / 2;
+    int n = static_cast<int>(tok->Encode(text.substr(0, bounds[mid])).size());
+    if (n <= budget) {
+      best = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return bounds[best];
+}
+
 // model_dir is empty or directory creation fails; callers must treat that
 // as "caching disabled for this run".
 static std::string ensureCacheDir(const std::string &model_dir) {
@@ -3841,30 +3908,52 @@ int main(int argc, char **argv) {
       auto json = nlohmann::json::parse(req.body);
       std::string text = json.value("prompt", std::string());
       const int max_len = 77;
+      // Tokens that fit alongside the implicit BOS/EOS markers.
+      const int budget = max_len - 2;
 
       int count = 2;  // BOS + EOS
+      // UTF-16 index of the first character whose tokens exceed the limit, or
+      // -1 when the prompt fits. For a text token the boundary is found at the
+      // sub-word edge inside it; an embedding is an indivisible vector block,
+      // so it is flagged from its first character.
+      int overflow_offset = -1;
       if (!text.empty() && tokenizer) {
         auto tokens = promptProcessor.process(text);
         const int dim1 = 768;
         const int dim2 = text_embedding_size_2;
         int content = 0;
         for (const auto &token : tokens) {
+          int tc = 0;
           if (token.is_embedding) {
-            int emb_tokens = 0;
             if (!token.embedding_data.empty())
-              emb_tokens = token.embedding_data.size() / dim1;
+              tc = token.embedding_data.size() / dim1;
             else if (sdxl_mode && !token.embedding_data_2.empty())
-              emb_tokens = token.embedding_data_2.size() / dim2;
-            content += emb_tokens;
+              tc = token.embedding_data_2.size() / dim2;
           } else {
-            std::vector<int> token_ids = tokenizer->Encode(token.text);
-            content += (int)token_ids.size();
+            tc = (int)tokenizer->Encode(token.text).size();
           }
+          if (overflow_offset < 0 && content + tc > budget) {
+            size_t byte_off = token.source_start;
+            if (!token.is_embedding) {
+              // Boundary inside a text token: find the sub-word edge in the
+              // cleaned text, then map it back to the user's prompt so the grey
+              // region lines up with the actual characters they typed.
+              size_t prefix = prefixBytesWithinBudget(
+                  token.text, budget - content, tokenizer.get());
+              byte_off = (prefix < token.char_src.size())
+                             ? token.char_src[prefix]
+                             : token.source_start;
+            }
+            overflow_offset = utf8ByteOffsetToUtf16(text, byte_off);
+          }
+          content += tc;
         }
         count = content + 2;  // BOS + EOS
       }
 
-      nlohmann::json resp = {{"count", count}, {"max_length", max_len}};
+      nlohmann::json resp = {{"count", count},
+                             {"max_length", max_len},
+                             {"overflow_offset", overflow_offset}};
       res.status = 200;
       res.set_content(resp.dump(), "application/json");
     } catch (const std::exception &e) {

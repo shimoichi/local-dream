@@ -49,7 +49,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
@@ -78,6 +81,7 @@ fun PromptTagTextField(
     showSuggestions: Boolean = true,
     onFocusChanged: (Boolean) -> Unit = {},
     highlightQuery: String? = null,
+    overflowOffset: Int = -1,
     maxCollapsedLines: Int = 2,
     minCollapsedLines: Int = 2,
     minExpandedLines: Int = 3,
@@ -86,6 +90,26 @@ fun PromptTagTextField(
     var anchorWidthPx by remember { mutableIntStateOf(0) }
     var anchorTopPx by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
+
+    // Grey out the portion of the prompt past the CLIP token limit. The offset
+    // is a UTF-16 index from the backend; it may lag the latest keystroke, so
+    // the transformation clamps it to the current text length.
+    val overflowColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+    val overflowTransformation = remember(overflowOffset, overflowColor) {
+        VisualTransformation { text ->
+            if (overflowOffset in 0 until text.length) {
+                val styled = buildAnnotatedString {
+                    append(text.subSequence(0, overflowOffset))
+                    withStyle(SpanStyle(color = overflowColor)) {
+                        append(text.subSequence(overflowOffset, text.length))
+                    }
+                }
+                TransformedText(styled, OffsetMapping.Identity)
+            } else {
+                TransformedText(text, OffsetMapping.Identity)
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         OutlinedTextField(
@@ -100,6 +124,7 @@ fun PromptTagTextField(
                 },
             enabled = enabled,
             label = label,
+            visualTransformation = overflowTransformation,
             maxLines = if (expanded) Int.MAX_VALUE else maxCollapsedLines,
             minLines = if (expanded) minExpandedLines else minCollapsedLines,
             shape = MaterialTheme.shapes.medium,

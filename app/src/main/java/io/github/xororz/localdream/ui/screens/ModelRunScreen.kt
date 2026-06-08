@@ -247,7 +247,7 @@ private val tokenizeClient: OkHttpClient by lazy {
         .build()
 }
 
-private data class TokenizeResult(val count: Int, val maxLength: Int)
+private data class TokenizeResult(val count: Int, val maxLength: Int, val overflowOffset: Int)
 
 private suspend fun tokenizePromptRequest(text: String): TokenizeResult? = withContext(Dispatchers.IO) {
     try {
@@ -265,6 +265,7 @@ private suspend fun tokenizePromptRequest(text: String): TokenizeResult? = withC
             TokenizeResult(
                 count = json.optInt("count", 0),
                 maxLength = json.optInt("max_length", 77),
+                overflowOffset = json.optInt("overflow_offset", -1),
             )
         }
     } catch (_: Exception) {
@@ -739,6 +740,10 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     var negativePromptTokenCount by remember { mutableIntStateOf(2) }
     var promptTokenMax by remember { mutableIntStateOf(77) }
     var negativePromptTokenMax by remember { mutableIntStateOf(77) }
+    // UTF-16 index from which the prompt exceeds the token limit, or -1 when it
+    // fits. Drives the greyed-out overflow hint in the prompt fields.
+    var promptOverflowOffset by remember { mutableIntStateOf(-1) }
+    var negativePromptOverflowOffset by remember { mutableIntStateOf(-1) }
 
     LaunchedEffect(prompt, isCheckingBackend) {
         if (isCheckingBackend) return@LaunchedEffect
@@ -746,6 +751,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         val result = tokenizePromptRequest(prompt) ?: return@LaunchedEffect
         promptTokenCount = result.count
         promptTokenMax = result.maxLength
+        promptOverflowOffset = result.overflowOffset
     }
     LaunchedEffect(negativePrompt, isCheckingBackend) {
         if (isCheckingBackend) return@LaunchedEffect
@@ -753,6 +759,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         val result = tokenizePromptRequest(negativePrompt) ?: return@LaunchedEffect
         negativePromptTokenCount = result.count
         negativePromptTokenMax = result.maxLength
+        negativePromptOverflowOffset = result.overflowOffset
     }
 
     // Build embedding TagSuggestion rows for the current query. Returns at most
@@ -2415,12 +2422,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                     label = stringResource(R.string.image_prompt),
                                     count = promptTokenCount,
                                     max = promptTokenMax,
+                                    showCount = prompt.isNotEmpty(),
                                 )
                             },
                             suggestions = promptSuggestions,
                             onSuggestionClick = ::applyPromptSuggestion,
                             showSuggestions = tagAutocompleteAvailable && isPromptFocused,
                             highlightQuery = promptActiveQuery,
+                            overflowOffset = promptOverflowOffset,
                             onFocusChanged = {
                                 isPromptFocused = it
                                 if (!it) promptSuggestions = emptyList()
@@ -2436,12 +2445,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                     label = stringResource(R.string.negative_prompt),
                                     count = negativePromptTokenCount,
                                     max = negativePromptTokenMax,
+                                    showCount = negativePrompt.isNotEmpty(),
                                 )
                             },
                             suggestions = negativePromptSuggestions,
                             onSuggestionClick = ::applyNegativePromptSuggestion,
                             showSuggestions = tagAutocompleteAvailable && isNegativePromptFocused,
                             highlightQuery = negativePromptActiveQuery,
+                            overflowOffset = negativePromptOverflowOffset,
                             onFocusChanged = {
                                 isNegativePromptFocused = it
                                 if (!it) negativePromptSuggestions = emptyList()
@@ -4578,10 +4589,12 @@ fun UpscalerModelCard(
 }
 
 @Composable
-private fun PromptCountLabel(label: String, count: Int, max: Int) {
+private fun PromptCountLabel(label: String, count: Int, max: Int, showCount: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label)
-        Spacer(Modifier.width(6.dp))
-        Text("$count/$max")
+        if (showCount) {
+            Spacer(Modifier.width(6.dp))
+            Text("$count/$max")
+        }
     }
 }
