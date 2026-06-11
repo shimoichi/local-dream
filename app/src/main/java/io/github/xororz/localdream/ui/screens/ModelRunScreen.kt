@@ -870,7 +870,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             }
             val started = try {
                 withContext(Dispatchers.IO) {
-                    File(context.filesDir, "ultrafix.txt").writeText(bitmapToBase64Png(bmp))
+                    File(context.filesDir, "ultrafix.txt").writeText(bitmapToBase64Jpeg(bmp))
                 }
                 pendingUltrafix = true
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
@@ -2270,7 +2270,9 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                             // Ultrafix takes over where upscaling stops: NPU-only,
                             // image larger than the upscale ceiling, and every
                             // UNet/VAE tile must fit inside the shorter edge.
-                            showUltrafixButton = !model.runOnCpu &&
+                            // It is tiled img2img, so the backend must have been
+                            // started with its VAE encoder (useImg2img).
+                            showUltrafixButton = useImg2img && !model.runOnCpu &&
                                 generationParams?.let {
                                     maxOf(it.width, it.height) > 1024 &&
                                         minOf(it.width, it.height) >=

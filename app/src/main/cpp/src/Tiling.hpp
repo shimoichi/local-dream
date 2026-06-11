@@ -89,6 +89,11 @@ inline std::vector<int> calculate_tile_positions(int dimension, int tile_size,
 // Calculate tile positions and overlaps for VAE encoder/decoder.
 // `vae_tile_size` is the fixed graph size in pixel space (512 for SD1.5 NPU,
 // 1024 for SDXL); the minimum overlap is a quarter tile in latent space.
+// The grid is computed in latent space and scaled up: latent coordinates are
+// exact (image dimensions are 8-aligned), so the pixel tile fed to the
+// encoder and the latent slot its output is blended into always describe the
+// same region. Spreading in pixel space first and dividing would truncate
+// and desync the two grids by up to 7px.
 // Returns: {pixel_positions, latent_positions, pixel_overlap_x,
 // pixel_overlap_y, latent_overlap_x, latent_overlap_y}
 inline std::tuple<std::vector<std::pair<int, int>>,
@@ -99,54 +104,42 @@ calculate_vae_tile_positions(int pixel_width, int pixel_height,
   const int vae_latent_tile_size = vae_tile_size / scale_factor;
   const int min_latent_overlap = vae_latent_tile_size / 4;
 
-  auto pixel_x_coords = calculate_tile_positions(
-      pixel_width, vae_tile_size, min_latent_overlap * scale_factor);
-  auto pixel_y_coords = calculate_tile_positions(
-      pixel_height, vae_tile_size, min_latent_overlap * scale_factor);
-
-  std::vector<int> latent_x_coords;
-  std::vector<int> latent_y_coords;
-  for (int px : pixel_x_coords) {
-    latent_x_coords.push_back(px / scale_factor);
-  }
-  for (int py : pixel_y_coords) {
-    latent_y_coords.push_back(py / scale_factor);
-  }
+  auto latent_x_coords =
+      calculate_tile_positions(pixel_width / scale_factor,
+                               vae_latent_tile_size, min_latent_overlap);
+  auto latent_y_coords =
+      calculate_tile_positions(pixel_height / scale_factor,
+                               vae_latent_tile_size, min_latent_overlap);
 
   std::vector<std::pair<int, int>> pixel_positions;
   std::vector<std::pair<int, int>> latent_positions;
-
-  for (int py : pixel_y_coords) {
-    for (int px : pixel_x_coords) {
-      pixel_positions.push_back({px, py});
-    }
-  }
+  pixel_positions.reserve(latent_x_coords.size() * latent_y_coords.size());
+  latent_positions.reserve(latent_x_coords.size() * latent_y_coords.size());
 
   for (int ly : latent_y_coords) {
     for (int lx : latent_x_coords) {
       latent_positions.push_back({lx, ly});
+      pixel_positions.push_back({lx * scale_factor, ly * scale_factor});
     }
   }
 
-  int pixel_overlap_x = 0;
   int latent_overlap_x = 0;
-  int pixel_overlap_y = 0;
   int latent_overlap_y = 0;
-
-  if (pixel_x_coords.size() > 1) {
-    pixel_overlap_x = vae_tile_size - (pixel_x_coords[1] - pixel_x_coords[0]);
+  if (latent_x_coords.size() > 1) {
     latent_overlap_x =
         vae_latent_tile_size - (latent_x_coords[1] - latent_x_coords[0]);
   }
-
-  if (pixel_y_coords.size() > 1) {
-    pixel_overlap_y = vae_tile_size - (pixel_y_coords[1] - pixel_y_coords[0]);
+  if (latent_y_coords.size() > 1) {
     latent_overlap_y =
         vae_latent_tile_size - (latent_y_coords[1] - latent_y_coords[0]);
   }
 
-  return {pixel_positions, latent_positions, pixel_overlap_x,
-          pixel_overlap_y, latent_overlap_x, latent_overlap_y};
+  return {pixel_positions,
+          latent_positions,
+          latent_overlap_x * scale_factor,
+          latent_overlap_y * scale_factor,
+          latent_overlap_x,
+          latent_overlap_y};
 }
 
 // Row-major (x, y) tile grid over a latent plane plus the per-axis overlap

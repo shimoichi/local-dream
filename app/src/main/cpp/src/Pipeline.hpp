@@ -179,7 +179,9 @@ class Pipeline {
     nsfw_threshold_ = threshold;
   }
 
-  GenerationResult generate(const GenerationRequest &req,
+  // Mutates `req` only to release the decoded image buffer once it is no
+  // longer needed (a ~190 MB allocation at ultrafix sizes).
+  GenerationResult generate(GenerationRequest &req,
                             const ProgressCallback &progress_callback);
 
  protected:
@@ -660,7 +662,7 @@ inline std::string Pipeline::renderPreview(const GenerationRequest &req,
 }
 
 inline GenerationResult Pipeline::generate(
-    const GenerationRequest &req, const ProgressCallback &progress_callback) {
+    GenerationRequest &req, const ProgressCallback &progress_callback) {
   if (req.prompt.empty()) throw std::invalid_argument("Prompt empty");
   if (safety_interpreter_ && !safety_session_)
     throw std::runtime_error("SafetyChecker missing");
@@ -770,6 +772,15 @@ inline GenerationResult Pipeline::generate(
           latents =
               xt::eval(pure_noise_latents * mask + latents * (1.0f - mask));
         }
+      }
+
+      // The full-resolution pixel buffers are only needed again for the
+      // post-decode laplacian blend, which runs only with a user mask. Free
+      // them otherwise: at ultrafix sizes (e.g. 4096x4096) each one holds
+      // ~190 MB through the whole denoising loop.
+      if (!req.has_mask) {
+        req.img_data = std::vector<float>();
+        original_image = xt::xarray<float>();
       }
 
       current_step++;

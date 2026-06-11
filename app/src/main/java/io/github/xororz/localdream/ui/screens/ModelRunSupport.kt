@@ -373,6 +373,20 @@ internal fun bitmapToBase64Png(bitmap: Bitmap): String {
     return Base64.getEncoder().encodeToString(baos.toByteArray())
 }
 
+/**
+ * JPEG-compresses the bitmap for backend upload. Unlike inpaint uploads
+ * (which must stay lossless because unmasked pixels are pasted back into the
+ * result verbatim), an ultrafix base image has every pixel re-encoded through
+ * the VAE and renoised, so JPEG artifacts at this quality are immaterial,
+ * while PNG-encoding a 4x-class image would take several seconds and tens
+ * of MB.
+ */
+internal fun bitmapToBase64Jpeg(bitmap: Bitmap, quality: Int = 95): String {
+    val baos = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+    return Base64.getEncoder().encodeToString(baos.toByteArray())
+}
+
 /** Default generation canvas side length for a model class. */
 internal fun defaultGenerationSize(isSdxl: Boolean, runOnCpu: Boolean): Int = when {
     isSdxl -> 1024
