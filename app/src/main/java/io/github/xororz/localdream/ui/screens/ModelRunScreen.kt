@@ -484,11 +484,11 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     }
     var ultrafixSaveJob: Job? by remember { mutableStateOf(null) }
     LaunchedEffect(Unit) {
-        ultrafixSteps = generationPreferences.observeUltrafixSteps().first()
+        ultrafixSteps = generationPreferences.observeUltrafixSteps(modelId).first()
         val maxDenoiseSteps =
             minOf(GenerationDefaults.ULTRAFIX_DENOISE_STEPS_MAX, ultrafixSteps.roundToInt())
         ultrafixDenoiseSteps =
-            generationPreferences.observeUltrafixDenoiseSteps().first().coerceIn(0, maxDenoiseSteps)
+            generationPreferences.observeUltrafixDenoiseSteps(modelId).first().coerceIn(0, maxDenoiseSteps)
     }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
     val upscalerPreferences =
@@ -541,7 +541,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         ultrafixSaveJob?.cancel()
         ultrafixSaveJob = scope.launch(Dispatchers.IO) {
             delay(500)
-            generationPreferences.saveUltrafixParams(ultrafixSteps, ultrafixDenoiseSteps)
+            generationPreferences.saveUltrafixParams(modelId, ultrafixSteps, ultrafixDenoiseSteps)
         }
     }
 
