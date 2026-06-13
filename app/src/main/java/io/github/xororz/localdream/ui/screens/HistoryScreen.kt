@@ -3,7 +3,6 @@ package io.github.xororz.localdream.ui.screens
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.Toast
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding

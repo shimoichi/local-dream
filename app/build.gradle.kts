@@ -159,4 +159,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Adds the ktlint-rule wrappers to detekt; we only enable UnusedImports
+    // (the standalone ktlint plugin's no-unused-imports does not flag them).
+    detektPlugins(libs.detekt.formatting)
 }
