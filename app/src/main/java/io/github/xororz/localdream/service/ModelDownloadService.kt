@@ -185,7 +185,8 @@ class ModelDownloadService : Service() {
                 tempFile?.delete()
                 extractTempDir?.deleteRecursively()
 
-                _downloadState.value = DownloadState.Error(modelId, e.message ?: "Unknown error")
+                _downloadState.value =
+                    DownloadState.Error(modelId, e.message ?: getString(R.string.unknown_error))
                 updateNotification(modelName, 0f, false, e.message)
 
                 withContext(Dispatchers.Main) {
@@ -205,7 +206,7 @@ class ModelDownloadService : Service() {
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw Exception("Download failed with code: ${response.code}")
+                throw Exception(getString(R.string.error_download_failed, response.code.toString()))
             }
 
             val body = response.body ?: throw Exception("Response body is null")

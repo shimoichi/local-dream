@@ -99,6 +99,9 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
     val msgErrorDownloadFailed = stringResource(R.string.error_download_failed)
     val msgUpscaleFailed = stringResource(R.string.upscale_failed)
     val msgDownloadModelFirst = stringResource(R.string.download_model_first)
+    val msgExecutableNotFound = stringResource(R.string.executable_not_found)
+    val msgFailedToStartBackend = stringResource(R.string.failed_to_start_backend)
+    val msgUnknownError = stringResource(R.string.unknown_error)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -156,7 +159,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
 
                 if (!executableFile.exists()) {
                     withContext(Dispatchers.Main) {
-                        errorMessage = "Executable file not found: ${executableFile.absolutePath}"
+                        errorMessage = msgExecutableNotFound.format(executableFile.absolutePath)
                     }
                     return@launch
                 }
@@ -252,7 +255,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
             } catch (e: Exception) {
                 Log.e("UpscaleScreen", "Failed to start backend", e)
                 withContext(Dispatchers.Main) {
-                    errorMessage = "Failed to start backend: ${e.message}"
+                    errorMessage = msgFailedToStartBackend.format(e.message ?: msgUnknownError)
                 }
             }
         }

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Local Dream</string>
+
+    <!-- Models -->
     <string name="anythingv5_description">Anime Image Generation</string>
     <string name="cyberrealistic_description">Realistic Image Generation</string>
     <string name="illustriousv16_description">WAI Illustrious SDXL v16</string>
@@ -38,9 +40,12 @@
     <string name="qteamix_description">Chibi Style Anime</string>
     <string name="cuteyukimix_description">Cute Style Anime</string>
     <string name="absolutereality_description">Realistic Image Generation</string>
+    <!-- Models -->
     <string name="backend_notify">バックエンドサービス実行中</string>
     <string name="backend_notify_title">SD モデルのバックエンド</string>
     <string name="generating_notify">画像の生成中…</string>
+
+    <!-- Common -->
     <string name="settings">設定</string>
     <string name="appearance">外観</string>
     <string name="theme_preset">テーマカラー</string>
@@ -69,6 +74,8 @@
     <string name="must_read">このアプリは、CPU/GPU および一部の Qualcomm 製 NPU 上で Stable Diffusion による画像生成を実行できます。\n\nSD1.5 モデルは、Hexagon V68 アーキテクチャ以降の Snapdragon NPU で動作します。\n\nSDXL モデルは、Snapdragon 8 Gen 3 以降のデバイスで動作します。\n\n上記に該当しないチップでは、CPU/GPU のみでの実行となります。\n\nこのプロジェクトはオープンソースで、\nhttps://github.com/xororz/local-dream\nにてソースコードの閲覧や Issue の報告ができます。\n\nドキュメント：https://ld.chino.icu</string>
     <string name="help">ヘルプ</string>
     <string name="more_options">その他</string>
+
+    <!-- Model List Screen -->
     <string name="available_models">利用可能なモデル</string>
     <plurals name="selected_items">
         <item quantity="other">%d 選択</item>
@@ -99,13 +106,18 @@
     <plurals name="preview_stride_hint">
         <item quantity="other">%d ステップごとにプレビューを更新します (1 ～ 10)。</item>
     </plurals>
+    <!-- Crop Screen -->
     <string name="crop_image">画像をトリミング</string>
     <string name="crop_hint">ドラッグして切り抜き範囲を調整</string>
+
+    <!-- Inpaint Screen -->
     <string name="set_inpaint_area">インペイント範囲を設定</string>
     <string name="inpaint_hint">インペイントしたい部分を塗ってください</string>
     <string name="undo">元に戻す</string>
     <string name="redo">やり直す</string>
     <string name="brush_color">ブラシの色</string>
+
+    <!-- Run Screen -->
     <string name="prompt_settings">プロンプト</string>
     <string name="advanced_settings">詳細</string>
     <string name="advanced_settings_title">詳細設定</string>
@@ -155,6 +167,8 @@
     <string name="reset_hint">すべてのパラメータをリセットしますか? この操作は元に戻せません。</string>
     <string name="media_permission_hint">img2img生成にはメディア許可が必要です</string>
     <string name="backend_failed">バックエンドの起動に失敗しました。デバイスがサポートされていない可能性があります。</string>
+
+    <!-- Parameter Settings -->
     <string name="generation_params">生成パラメータ</string>
     <string name="steps">ステップ数: %d</string>
     <string name="image_size">画像サイズ: %1$dx%2$d</string>
@@ -180,7 +194,7 @@
     <string name="basic_time">時間: %s</string>
     <string name="opencl_warning">GPUランタイムに関する警告：各解像度での最初の実行はキャッシュファイルを生成するため、処理速度が遅くなります。その後の実行は大幅に高速化されます。</string>
 
-    <!-- パラメータ共有 -->
+    <!-- Parameter Share -->
     <string name="share">共有</string>
     <string name="share_params_title">パラメータを共有</string>
     <string name="share_params_hint">共有する項目を選択してください。JSON としてクリップボードに書き込まれ、任意の方法で送信できます。</string>
@@ -201,11 +215,17 @@
     <string name="import_applied">パラメータを適用しました</string>
     <string name="import_from_clipboard">クリップボードからインポート</string>
     <string name="import_no_params">クリップボードに共有パラメータが見つかりません</string>
+
+    <!-- Error Messages -->
     <string name="error_download_failed">ダウンロード失敗: %s</string>
     <string name="error_request_failed">リクエスト失敗: %s</string>
     <string name="unknown_error">不明なエラー</string>
+
+    <!-- Info Messages -->
     <string name="image_saved">画像をギャラリーに保存しました</string>
     <string name="loading_model">モデルの読み込み中…</string>
+
+    <!-- File Manager -->
     <string name="file_manager">ファイル管理</string>
     <string name="delete_file">ファイルを削除</string>
     <string name="delete_file_confirm">ファイル「%s」を削除してもよろしいですか?</string>
@@ -221,8 +241,12 @@
     <string name="clear_cache_with_size">キャッシュを消去 (%s)</string>
     <string name="clear_cache_confirm">このモデルのキャッシュディレクトリを消去しますか？プロンプトキャッシュと OpenCL キャッシュは次回使用時に再生成されます。</string>
     <string name="cache_cleared">キャッシュを消去しました</string>
+
+    <!-- Settings -->
     <string name="download_source">ダウンロード先</string>
     <string name="feature_settings">機能設定</string>
+
+    <!-- Custom Model -->
     <string name="add_custom_model">カスタムモデルを追加</string>
     <string name="add_custom_npu_model">カスタムNPUモデルを追加</string>
     <string name="custom_model">カスタムモデル</string>
@@ -253,6 +277,8 @@
     <string name="selected_lora_files">選択したLoRAファイル：</string>
     <string name="copying_lora_files">LoRAファイルをコピー…</string>
     <string name="lora_weight">重み：</string>
+
+    <!-- Embedding Manager -->
     <string name="embedding_manager">埋め込みマネージャー</string>
     <string name="no_embeddings">埋め込みファイルが見つかりません</string>
     <string name="import_embedding">埋め込みのインポート</string>
@@ -262,9 +288,13 @@
     <string name="embedding_imported">埋め込みが正常にインポートされました</string>
     <string name="embedding_import_failed">埋め込みのインポートに失敗しました: %s</string>
     <string name="only_safetensors_supported">.safetensorsファイルのみがサポートされています</string>
+
+    <!-- Upscaler -->
     <string name="select_upscaler_model">アップスケーラーモデルを選択</string>
     <string name="upscaling_image">画像のアップスケール中…</string>
     <string name="upscale_failed">アップスケールに失敗しました: %s</string>
+
+    <!-- UltraFix -->
     <string name="ultrafix">UltraFix</string>
     <string name="ultrafix_confirm_hint">UltraFixは以下のパラメータでタイル分割img2imgを実行し、画像全体を補正します。ノイズ除去強度は0.5以下を推奨します。処理には時間がかかるため、デバイスが高温の時は使用しないでください。パラメータを変更する場合は先にプロンプトページで編集してください。</string>
     <string name="ultrafix_params">画像: %1$dx%2$d\nタイル: %3$dpx\nステップ: %4$d\nCFG: %5$s\nノイズ除去強度: %6$s\nスケジューラ: %7$s\nシード: %8$s</string>
@@ -357,4 +387,39 @@
     <string name="history_filter_sort_desc">新しい順</string>
     <string name="history_filter_sort_asc">古い順</string>
     <string name="history_view_filter">フィルター</string>
+
+    <!-- Permissions -->
+    <string name="permission_storage_required">生成した画像を保存するにはストレージ許可が必要です</string>
+    <string name="permission_notification_required">バックグラウンドでの画像生成には通知許可が必要です</string>
+
+    <!-- Run Screen extras -->
+    <string name="gpu_runtime_warning_title">GPU ランタイムの警告</string>
+    <string name="please_crop_first">先に画像を切り抜いてください</string>
+    <string name="no_image_available">利用できる画像がありません</string>
+    <string name="image_load_failed">画像の読み込みに失敗しました</string>
+
+    <!-- Report -->
+    <string name="report">報告</string>
+    <string name="report_image_confirm">この画像が不適切だと感じた場合は報告してください。パラメータと画像が審査のためサーバーに送信されます。</string>
+    <string name="report_success">ご報告ありがとうございます。</string>
+    <string name="report_failed">報告に失敗しました</string>
+
+    <!-- Error messages extras -->
+    <string name="error_title">エラー</string>
+    <string name="ok">OK</string>
+    <string name="error_with_detail">エラー: %s</string>
+    <string name="save_failed_detail">保存に失敗しました: %s</string>
+    <string name="img2img_failed_detail">img2img に失敗しました: %s</string>
+    <string name="failed_to_start_backend">バックエンドの起動に失敗しました: %s</string>
+    <string name="executable_not_found">実行ファイルが見つかりません: %s</string>
+    <string name="cannot_open_file">選択したファイルを開けません</string>
+    <string name="only_qualcomm_npu">カスタム NPU モデルは Qualcomm デバイスのみ対応しています</string>
+    <string name="conversion_need_sd15">SD1.5 の safetensors モデルを使用してください</string>
+    <string name="converting_with_line">変換中: %s</string>
+
+    <!-- Temp file cleanup -->
+    <string name="clean_temp_files">一時ファイルを削除</string>
+    <string name="clean_temp_confirm">一時ファイル（中断したダウンロードや一時バッファ）%s を削除しますか？</string>
+    <string name="clean_temp_none">削除する一時ファイルはありません</string>
+    <string name="clean_temp_done">%s を解放しました</string>
 </resources>

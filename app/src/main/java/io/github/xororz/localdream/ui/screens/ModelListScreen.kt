@@ -92,6 +92,7 @@ import io.github.xororz.localdream.ui.theme.Motion
 import io.github.xororz.localdream.ui.theme.ThemePreset
 import io.github.xororz.localdream.ui.theme.scheme
 import io.github.xororz.localdream.utils.LogCapture
+import io.github.xororz.localdream.utils.TempCleaner
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -207,6 +208,8 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     val msgDeleteFailed = stringResource(R.string.delete_failed)
     val msgUnsupportNpu = stringResource(R.string.unsupport_npu)
     val msgTagImportFailed = stringResource(R.string.tag_import_failed)
+    val msgCleanTempNone = stringResource(R.string.clean_temp_none)
+    val msgCleanTempDone = stringResource(R.string.clean_temp_done)
 
     var downloadingModel by remember { mutableStateOf<Model?>(null) }
     var currentProgress by remember { mutableStateOf<DownloadProgress?>(null) }
@@ -225,6 +228,8 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showFileManagerDialog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
+    var showCleanTempDialog by remember { mutableStateOf(false) }
+    var tempScanBytes by remember { mutableLongStateOf(0L) }
     var showEmbeddingManagerDialog by remember { mutableStateOf(false) }
     var showCustomModelDialog by remember { mutableStateOf(false) }
     var showCustomNpuModelDialog by remember { mutableStateOf(false) }
@@ -419,6 +424,32 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                 .map { it.id }
                 .toSet(),
             onDismiss = { showBackupDialog = false },
+        )
+    }
+
+    if (showCleanTempDialog) {
+        AlertDialog(
+            onDismissRequest = { showCleanTempDialog = false },
+            title = { Text(stringResource(R.string.clean_temp_files)) },
+            text = { Text(stringResource(R.string.clean_temp_confirm, formatBytes(tempScanBytes))) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCleanTempDialog = false
+                    scope.launch {
+                        val freed = TempCleaner.clean(context)
+                        Toast.makeText(
+                            context,
+                            msgCleanTempDone.format(formatBytes(freed)),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }) { Text(stringResource(R.string.confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCleanTempDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
     }
 
@@ -1594,6 +1625,27 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             icon = Icons.Default.SettingsBackupRestore,
                             label = stringResource(R.string.backup_restore),
                             onClick = { showBackupDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Clean up app scratch / orphaned temp files
+                    item {
+                        SettingNavCard(
+                            icon = Icons.Default.CleaningServices,
+                            label = stringResource(R.string.clean_temp_files),
+                            onClick = {
+                                scope.launch {
+                                    val bytes = TempCleaner.scan(context)
+                                    if (bytes <= 0L) {
+                                        Toast.makeText(context, msgCleanTempNone, Toast.LENGTH_SHORT)
+                                            .show()
+                                    } else {
+                                        tempScanBytes = bytes
+                                        showCleanTempDialog = true
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -2788,7 +2840,7 @@ suspend fun extractNpuModel(
 
         if (!Model.isQualcommDevice()) {
             withContext(Dispatchers.Main) {
-                onError("Only Qualcomm devices are supported for custom NPU models")
+                onError(context.getString(R.string.only_qualcomm_npu))
             }
             return@withContext
         }
@@ -2818,7 +2870,7 @@ suspend fun extractNpuModel(
         }
 
         val rawInputStream = context.contentResolver.openInputStream(zipUri)
-            ?: throw Exception("Cannot open selected zip file")
+            ?: throw Exception(context.getString(R.string.cannot_open_file))
 
         val countingStream = CountingInputStream(rawInputStream)
         val extractedBytesAtomic = AtomicLong(0L)
@@ -2894,7 +2946,7 @@ suspend fun extractNpuModel(
         }
 
         withContext(Dispatchers.Main) {
-            onError("Extraction failed: ${e.message}")
+            onError(e.message ?: context.getString(R.string.unknown_error))
         }
     }
 }
@@ -3156,7 +3208,7 @@ suspend fun importEmbedding(context: Context, fileUri: Uri, onSuccess: () -> Uni
         }
     } catch (e: Exception) {
         withContext(Dispatchers.Main) {
-            onError(e.message ?: "Unknown error")
+            onError(e.message ?: context.getString(R.string.unknown_error))
         }
     }
 }
@@ -3196,7 +3248,7 @@ suspend fun convertCustomModel(
         }
 
         val inputStream = context.contentResolver.openInputStream(fileUri)
-            ?: throw Exception("Cannot open selected file")
+            ?: throw Exception(context.getString(R.string.cannot_open_file))
         val modelFile = File(modelDir, "model.safetensors")
 
         inputStream.use { input ->
@@ -3326,7 +3378,7 @@ suspend fun convertCustomModel(
             while (reader.readLine().also { line = it } != null) {
                 Log.i("ModelConvert", "Convert: $line")
                 withContext(Dispatchers.Main) {
-                    onProgress("Converting: $line")
+                    onProgress(context.getString(R.string.converting_with_line, line.orEmpty()))
                 }
             }
         }
@@ -3363,7 +3415,7 @@ suspend fun convertCustomModel(
         } else {
             modelDir.deleteRecursively()
             withContext(Dispatchers.Main) {
-                onError("Model conversion failed: Please use SD1.5 safetensors model")
+                onError(context.getString(R.string.conversion_need_sd15))
             }
         }
     } catch (e: Exception) {
@@ -3376,7 +3428,7 @@ suspend fun convertCustomModel(
         }
 
         withContext(Dispatchers.Main) {
-            onError("Conversion failed: ${e.message}")
+            onError(e.message ?: context.getString(R.string.unknown_error))
         }
     }
 }

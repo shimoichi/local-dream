@@ -194,7 +194,7 @@
     <string name="basic_time">耗时: %s</string>
     <string name="opencl_warning">GPU运行时警告：每个分辨率的首次运行会比较慢，这会生成缓存文件。后续运行会快一些。</string>
 
-    <!-- 参数分享 -->
+    <!-- Parameter Share -->
     <string name="share">分享</string>
     <string name="share_params_title">分享参数</string>
     <string name="share_params_hint">勾选要分享的字段，将以 JSON 形式写入剪贴板，便于通过任意方式发送。</string>
@@ -387,4 +387,39 @@
     <string name="history_filter_sort_desc">最新优先</string>
     <string name="history_filter_sort_asc">最旧优先</string>
     <string name="history_view_filter">过滤</string>
+
+    <!-- Permissions -->
+    <string name="permission_storage_required">保存生成的图像需要存储权限</string>
+    <string name="permission_notification_required">后台生成图像需要通知权限</string>
+
+    <!-- Run Screen extras -->
+    <string name="gpu_runtime_warning_title">GPU 运行时警告</string>
+    <string name="please_crop_first">请先裁剪图像</string>
+    <string name="no_image_available">没有可用的图像</string>
+    <string name="image_load_failed">加载图像失败</string>
+
+    <!-- Report -->
+    <string name="report">举报</string>
+    <string name="report_image_confirm">如果你认为此图像不当，可以举报。参数和图像将发送到服务器进行审核。</string>
+    <string name="report_success">感谢你的举报。</string>
+    <string name="report_failed">举报失败</string>
+
+    <!-- Error messages extras -->
+    <string name="error_title">错误</string>
+    <string name="ok">确定</string>
+    <string name="error_with_detail">错误: %s</string>
+    <string name="save_failed_detail">保存失败: %s</string>
+    <string name="img2img_failed_detail">img2img 失败: %s</string>
+    <string name="failed_to_start_backend">启动后端失败: %s</string>
+    <string name="executable_not_found">未找到可执行文件: %s</string>
+    <string name="cannot_open_file">无法打开所选文件</string>
+    <string name="only_qualcomm_npu">仅高通设备支持自定义 NPU 模型</string>
+    <string name="conversion_need_sd15">请使用 SD1.5 的 safetensors 模型</string>
+    <string name="converting_with_line">转换中: %s</string>
+
+    <!-- Temp file cleanup -->
+    <string name="clean_temp_files">清理临时文件</string>
+    <string name="clean_temp_confirm">清理 %s 临时文件（中断的下载和临时缓冲）？</string>
+    <string name="clean_temp_none">没有可清理的临时文件</string>
+    <string name="clean_temp_done">已释放 %s</string>
 </resources>

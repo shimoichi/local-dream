@@ -62,6 +62,9 @@ fun CropImageScreen(
     val coroutineScope = rememberCoroutineScope()
     val cropifyState = rememberCropifyState()
 
+    val msgErrorWithDetail = stringResource(R.string.error_with_detail)
+    val msgUnknownError = stringResource(R.string.unknown_error)
+
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -117,7 +120,7 @@ fun CropImageScreen(
                 }
                 onCropComplete(base64String, androidBitmap, cropRect)
             } catch (e: Exception) {
-                errorMessage = "Error: ${e.message}"
+                errorMessage = msgErrorWithDetail.format(e.message ?: msgUnknownError)
             } finally {
                 isLoading = false
             }
@@ -162,7 +165,7 @@ fun CropImageScreen(
                 state = cropifyState,
                 onImageCropped = handleCroppedImage,
                 onFailedToLoadImage = { error ->
-                    errorMessage = "Error: ${error.message}"
+                    errorMessage = msgErrorWithDetail.format(error.message ?: msgUnknownError)
                 },
                 option = CropifyOption(
                     frameSize = CropifySize.FixedAspectRatio(aspectRatio),

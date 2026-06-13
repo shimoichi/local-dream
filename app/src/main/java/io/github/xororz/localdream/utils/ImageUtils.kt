@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.Model
 import io.github.xororz.localdream.ui.screens.GenerationParameters
 import java.io.ByteArrayOutputStream
@@ -278,7 +279,12 @@ suspend fun saveImage(context: Context, bitmap: Bitmap, onSuccess: () -> Unit, o
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                onError("Failed to save: ${e.localizedMessage}")
+                onError(
+                    context.getString(
+                        R.string.save_failed_detail,
+                        e.localizedMessage ?: context.getString(R.string.unknown_error),
+                    ),
+                )
             }
         }
     }
@@ -342,7 +348,12 @@ suspend fun saveImageFromFile(context: Context, sourceFile: File, onSuccess: () 
             withContext(Dispatchers.Main) { onSuccess() }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                onError("Failed to save: ${e.localizedMessage}")
+                onError(
+                    context.getString(
+                        R.string.save_failed_detail,
+                        e.localizedMessage ?: context.getString(R.string.unknown_error),
+                    ),
+                )
             }
         }
     }

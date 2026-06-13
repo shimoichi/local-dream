@@ -268,6 +268,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     val msgUltrafixFailed = stringResource(R.string.ultrafix_failed)
     val msgSavedCountWithFailed = stringResource(R.string.saved_count_with_failed)
     val msgDeletedCountWithFailed = stringResource(R.string.deleted_count_with_failed)
+    val msgUnknownError = stringResource(R.string.unknown_error)
+    val msgSaveFailed = stringResource(R.string.save_failed_detail)
+    val msgImg2imgFailed = stringResource(R.string.img2img_failed_detail)
+    val msgPleaseCropFirst = stringResource(R.string.please_crop_first)
+    val msgReportSuccess = stringResource(R.string.report_success)
+    val msgReportFailed = stringResource(R.string.report_failed)
+    val msgNoImageAvailable = stringResource(R.string.no_image_available)
+    val msgImageLoadFailed = stringResource(R.string.image_load_failed)
     // Reaches the screen with the repository already loaded on the normal
     // navigation path; resolves asynchronously after process recreation.
     val model = remember(modelRepository.models) { modelRepository.models.find { it.id == modelId } }
@@ -727,7 +735,11 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 base64EncodeDone = true
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        msgSaveFailed.format(e.message ?: msgUnknownError),
+                        Toast.LENGTH_SHORT,
+                    ).show()
                     selectedImageUri = null
                     croppedBitmap = null
                     cropRect = null
@@ -763,7 +775,11 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        msgSaveFailed.format(e.message ?: msgUnknownError),
+                        Toast.LENGTH_SHORT,
+                    ).show()
                     isInpaintMode = false
                     maskBitmap = null
                     savedPathHistory = null
@@ -833,7 +849,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
-                    "img2img failed: ${e.message}",
+                    msgImg2imgFailed.format(e.message ?: msgUnknownError),
                     Toast.LENGTH_SHORT,
                 ).show()
                 base64EncodeDone = false
@@ -1382,7 +1398,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     }
     if (showOpenCLWarningDialog) {
         ModelRunConfirmDialog(
-            title = "GPU Runtime Warning",
+            title = stringResource(R.string.gpu_runtime_warning_title),
             text = stringResource(R.string.opencl_warning),
             onConfirm = {
                 showOpenCLWarningDialog = false
@@ -2115,7 +2131,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                         } else {
                                             Toast.makeText(
                                                 context,
-                                                "Please Crop First",
+                                                msgPleaseCropFirst,
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                         }
@@ -2472,11 +2488,10 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     }
     if (showReportDialog && currentBitmap != null && generationParams != null) {
         ModelRunConfirmDialog(
-            title = "Report",
-            text = "Report this image if you feel it is inappropriate. " +
-                "Params and image will be sent to the server for review.",
-            confirmText = "Report",
-            dismissText = "Cancel",
+            title = stringResource(R.string.report),
+            text = stringResource(R.string.report_image_confirm),
+            confirmText = stringResource(R.string.report),
+            dismissText = stringResource(R.string.cancel),
             destructiveConfirm = true,
             onConfirm = {
                 showReportDialog = false
@@ -2489,14 +2504,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                             onSuccess = {
                                 Toast.makeText(
                                     context,
-                                    "Thanks for your report.",
+                                    msgReportSuccess,
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             },
-                            onError = { error ->
+                            onError = {
                                 Toast.makeText(
                                     context,
-                                    "Error: $error",
+                                    msgReportFailed,
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             },
@@ -2526,7 +2541,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 } else {
                     Toast.makeText(
                         context,
-                        "No image available",
+                        msgNoImageAvailable,
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
@@ -2901,7 +2916,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                         } else {
                             Toast.makeText(
                                 context,
-                                "Failed to load image",
+                                msgImageLoadFailed,
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }

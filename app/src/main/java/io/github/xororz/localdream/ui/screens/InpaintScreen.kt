@@ -83,6 +83,9 @@ fun InpaintScreen(
     val context = LocalContext.current
     val density = LocalDensity.current
 
+    val msgErrorWithDetail = stringResource(R.string.error_with_detail)
+    val msgUnknownError = stringResource(R.string.unknown_error)
+
     val sharedPrefs =
         remember { context.getSharedPreferences("inpaint_prefs", Context.MODE_PRIVATE) }
     val defaultColor = Color.WHITE
@@ -312,7 +315,7 @@ fun InpaintScreen(
                 }
                 onInpaintComplete(base64String, originalBitmap, maskBitmap, pathHistory.toList())
             } catch (e: Exception) {
-                errorMessage = "Error: ${e.message}"
+                errorMessage = msgErrorWithDetail.format(e.message ?: msgUnknownError)
                 e.printStackTrace()
             } finally {
                 isLoading = false
@@ -797,13 +800,13 @@ fun InpaintScreen(
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
                             Text(
-                                text = "Error",
+                                text = stringResource(R.string.error_title),
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = errorMessage ?: "Unknown error occurred",
+                                text = errorMessage ?: stringResource(R.string.unknown_error),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
@@ -816,7 +819,7 @@ fun InpaintScreen(
                                     contentColor = MaterialTheme.colorScheme.onError,
                                 ),
                             ) {
-                                Text("OK")
+                                Text(stringResource(R.string.ok))
                             }
                         }
                     }
