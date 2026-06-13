@@ -306,9 +306,12 @@
 
     <!-- UltraFix -->
     <string name="ultrafix">UltraFix</string>
-    <string name="ultrafix_confirm_hint">UltraFix will refine this image with tiled img2img using the parameters below. A denoise strength of 0.5 or lower is recommended. Processing takes a long time; do not use this while the device is hot. To adjust the parameters, edit them on the prompt page first.</string>
-    <string name="ultrafix_params">Image: %1$dx%2$d\nTile: %3$dpx\nSteps: %4$d\nCFG: %5$s\nDenoise strength: %6$s\nScheduler: %7$s\nSeed: %8$s</string>
+    <string name="ultrafix_confirm_hint">UltraFix refines this image with tiled img2img. A denoise strength of 0.5 or lower is recommended. Processing takes a long time; avoid running it while the device is hot.</string>
     <string name="ultrafix_seed_random">Random</string>
+    <string name="ultrafix_denoise_steps_label">Denoise steps: %d</string>
+    <string name="ultrafix_source_info">Image: %1$dx%2$d  ·  Tile: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">Restore Defaults</string>
+    <string name="ultrafix_other_params_hint">Prompt, CFG, scheduler and seed are taken from the prompt page — edit them there.</string>
     <string name="ultrafix_preparing">Preparing UltraFix…</string>
     <string name="ultrafix_failed">UltraFix failed: %s</string>
     <string name="download_model_first">Please download the model first</string>

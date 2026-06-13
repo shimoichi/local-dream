@@ -296,9 +296,12 @@
 
     <!-- UltraFix -->
     <string name="ultrafix">UltraFix</string>
-    <string name="ultrafix_confirm_hint">UltraFix는 아래 매개변수로 타일 기반 img2img를 실행하여 이미지 전체를 보정합니다. 디노이즈 강도는 0.5 이하를 권장합니다. 처리 시간이 오래 걸리므로 기기가 과열된 상태에서는 사용하지 마세요. 매개변수를 변경하려면 먼저 프롬프트 페이지에서 수정하세요.</string>
-    <string name="ultrafix_params">이미지: %1$dx%2$d\n타일: %3$dpx\n스텝: %4$d\nCFG: %5$s\n디노이즈 강도: %6$s\n스케줄러: %7$s\n시드: %8$s</string>
+    <string name="ultrafix_confirm_hint">UltraFix는 타일 기반 img2img로 이미지 전체를 정교화합니다. 디노이즈 강도는 0.5 이하를 권장합니다. 처리 시간이 오래 걸리므로 기기가 과열된 상태에서는 사용하지 마세요.</string>
     <string name="ultrafix_seed_random">랜덤</string>
+    <string name="ultrafix_denoise_steps_label">디노이즈 스텝: %d</string>
+    <string name="ultrafix_source_info">이미지: %1$dx%2$d  ·  타일: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">기본값으로 복원</string>
+    <string name="ultrafix_other_params_hint">프롬프트, CFG, 스케줄러, 시드는 프롬프트 화면의 값을 사용합니다. 거기서 수정하세요.</string>
     <string name="ultrafix_preparing">UltraFix 준비 중…</string>
     <string name="ultrafix_failed">UltraFix에 실패했습니다: %s</string>
     <string name="download_model_first">먼저 모델을 다운로드하세요</string>

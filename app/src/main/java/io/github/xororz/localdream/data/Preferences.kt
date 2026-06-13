@@ -36,6 +36,31 @@ class GenerationPreferences(private val context: Context) {
     private val SHARE_CLEAR_CLIPBOARD_KEY =
         booleanPreferencesKey("share_clear_clipboard_on_import")
 
+    // UltraFix step/denoise are global (one repair recipe across models),
+    // independent of the per-model generation params. Denoise is stored as a
+    // step count; the strength sent to the backend is derived at use time.
+    private val ULTRAFIX_STEPS_KEY = floatPreferencesKey("ultrafix_steps")
+    private val ULTRAFIX_DENOISE_STEPS_KEY = intPreferencesKey("ultrafix_denoise_steps")
+
+    fun observeUltrafixSteps(): Flow<Float> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { it[ULTRAFIX_STEPS_KEY] ?: GenerationDefaults.GLOBAL.ultrafixSteps }
+
+    fun observeUltrafixDenoiseSteps(): Flow<Int> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { it[ULTRAFIX_DENOISE_STEPS_KEY] ?: GenerationDefaults.GLOBAL.ultrafixDenoiseSteps }
+
+    suspend fun saveUltrafixParams(steps: Float, denoiseSteps: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[ULTRAFIX_STEPS_KEY] = steps
+            preferences[ULTRAFIX_DENOISE_STEPS_KEY] = denoiseSteps
+        }
+    }
+
     fun observeShareUseBase64(): Flow<Boolean> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception

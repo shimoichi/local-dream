@@ -296,9 +296,12 @@
 
     <!-- UltraFix -->
     <string name="ultrafix">UltraFix</string>
-    <string name="ultrafix_confirm_hint">UltraFixは以下のパラメータでタイル分割img2imgを実行し、画像全体を補正します。ノイズ除去強度は0.5以下を推奨します。処理には時間がかかるため、デバイスが高温の時は使用しないでください。パラメータを変更する場合は先にプロンプトページで編集してください。</string>
-    <string name="ultrafix_params">画像: %1$dx%2$d\nタイル: %3$dpx\nステップ: %4$d\nCFG: %5$s\nノイズ除去強度: %6$s\nスケジューラ: %7$s\nシード: %8$s</string>
+    <string name="ultrafix_confirm_hint">UltraFix はタイル分割した img2img で画像全体を精細化します。ノイズ除去強度は 0.5 以下を推奨します。処理に時間がかかるため、デバイスが高温のときは使用しないでください。</string>
     <string name="ultrafix_seed_random">ランダム</string>
+    <string name="ultrafix_denoise_steps_label">ノイズ除去ステップ: %d</string>
+    <string name="ultrafix_source_info">画像: %1$dx%2$d  ·  タイル: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">デフォルトに戻す</string>
+    <string name="ultrafix_other_params_hint">プロンプト・CFG・スケジューラ・シードはプロンプト画面の値を使用します。変更はそちらで行ってください。</string>
     <string name="ultrafix_preparing">UltraFixを準備中…</string>
     <string name="ultrafix_failed">UltraFixに失敗しました: %s</string>
     <string name="download_model_first">まずモデルをダウンロードしてください</string>

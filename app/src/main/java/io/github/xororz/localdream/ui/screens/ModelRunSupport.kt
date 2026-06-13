@@ -394,6 +394,25 @@ internal fun defaultGenerationSize(isSdxl: Boolean, runOnCpu: Boolean): Int = wh
     else -> 512
 }
 
+/**
+ * Maps a target UltraFix denoise-step count to the denoise_strength the backend
+ * needs to run exactly that many steps.
+ *
+ * The backend derives its start step as floor(steps * (1 - strength)) and then
+ * runs (steps - start) denoising steps. Solving for a result of [denoiseSteps]
+ * and aiming at the midpoint of the target integer interval gives
+ * strength = (denoiseSteps - 0.5) / totalSteps: the half-step offset keeps the
+ * backend's float product safely inside the right interval, so rounding error
+ * (e.g. a 0.40001 that a naive ceil() would push to the next step) can never tip
+ * it across an integer boundary. [denoiseSteps] is clamped to [0, totalSteps];
+ * 0 collapses to the backend's minimum since it never runs zero steps.
+ */
+internal fun ultrafixDenoiseStrength(denoiseSteps: Int, totalSteps: Int): Float {
+    if (totalSteps <= 0) return 0f
+    val clamped = denoiseSteps.coerceIn(0, totalSteps)
+    return ((clamped - 0.5f) / totalSteps).coerceIn(0f, 1f)
+}
+
 @Immutable
 data class GenerationParameters(
     val steps: Int,

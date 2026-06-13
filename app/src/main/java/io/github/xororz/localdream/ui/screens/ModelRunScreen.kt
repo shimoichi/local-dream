@@ -21,11 +21,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
@@ -36,12 +31,9 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -56,88 +48,57 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -146,30 +107,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -180,7 +129,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.R
-import io.github.xororz.localdream.data.DownloadProgress
 import io.github.xororz.localdream.data.GenerationDefaults
 import io.github.xororz.localdream.data.GenerationMode
 import io.github.xororz.localdream.data.GenerationPreferences
@@ -193,23 +141,19 @@ import io.github.xororz.localdream.data.Resolution
 import io.github.xororz.localdream.data.TagAutocompleteRepository
 import io.github.xororz.localdream.data.TagMatchType
 import io.github.xororz.localdream.data.TagSuggestion
-import io.github.xororz.localdream.data.UpscalerModel
 import io.github.xororz.localdream.data.UpscalerRepository
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
-import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.GenerationParamsDialog
 import io.github.xororz.localdream.ui.components.ImportParametersDialog
 import io.github.xororz.localdream.ui.components.OverlayIconButton
-import io.github.xororz.localdream.ui.components.PromptTagTextField
 import io.github.xororz.localdream.ui.components.ReproduceParametersDialog
 import io.github.xororz.localdream.ui.components.ShareParamsFlow
 import io.github.xororz.localdream.ui.components.SmoothLinearWavyProgressIndicator
 import io.github.xororz.localdream.ui.components.ZoomableImageOverlay
 import io.github.xororz.localdream.ui.theme.Motion
-import io.github.xororz.localdream.utils.Http
 import io.github.xororz.localdream.utils.ImportedParams
 import io.github.xororz.localdream.utils.LogCapture
 import io.github.xororz.localdream.utils.ParamShare
@@ -218,29 +162,17 @@ import io.github.xororz.localdream.utils.performUpscale
 import io.github.xororz.localdream.utils.reportImage
 import io.github.xororz.localdream.utils.saveImage
 import io.github.xororz.localdream.utils.saveImageFromFile
-import io.github.xororz.localdream.utils.schedulerDisplayName
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.Base64
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -276,6 +208,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     val msgReportFailed = stringResource(R.string.report_failed)
     val msgNoImageAvailable = stringResource(R.string.no_image_available)
     val msgImageLoadFailed = stringResource(R.string.image_load_failed)
+    val msgGenerationInterrupted = stringResource(R.string.generation_interrupted)
     // Reaches the screen with the repository already loaded on the normal
     // navigation path; resolves asynchronously after process recreation.
     val model = remember(modelRepository.models) { modelRepository.models.find { it.id == modelId } }
@@ -540,6 +473,23 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     var showUltrafixConfirmDialog by remember { mutableStateOf(false) }
     var pendingUltrafix by remember { mutableStateOf(false) }
     var isUltrafixPreparing by remember { mutableStateOf(false) }
+    // UltraFix runs with its own steps/denoise (defaults 10 / 0.4), persisted
+    // globally and kept independent of the main generation params so tweaking
+    // them in the UltraFix dialog never touches the prompt-page settings.
+    var ultrafixSteps by remember { mutableFloatStateOf(GenerationDefaults.GLOBAL.ultrafixSteps) }
+    // Denoise is controlled as a step count (0..min(10, steps)); the backend
+    // strength is derived from it at run time.
+    var ultrafixDenoiseSteps by remember {
+        mutableIntStateOf(GenerationDefaults.GLOBAL.ultrafixDenoiseSteps)
+    }
+    var ultrafixSaveJob: Job? by remember { mutableStateOf(null) }
+    LaunchedEffect(Unit) {
+        ultrafixSteps = generationPreferences.observeUltrafixSteps().first()
+        val maxDenoiseSteps =
+            minOf(GenerationDefaults.ULTRAFIX_DENOISE_STEPS_MAX, ultrafixSteps.roundToInt())
+        ultrafixDenoiseSteps =
+            generationPreferences.observeUltrafixDenoiseSteps().first().coerceIn(0, maxDenoiseSteps)
+    }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
     val upscalerPreferences =
         remember { context.getSharedPreferences("upscaler_prefs", Context.MODE_PRIVATE) }
@@ -584,6 +534,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 scheduler = scheduler,
                 aspectRatio = aspectRatio,
             )
+        }
+    }
+
+    fun saveUltrafixParams() {
+        ultrafixSaveJob?.cancel()
+        ultrafixSaveJob = scope.launch(Dispatchers.IO) {
+            delay(500)
+            generationPreferences.saveUltrafixParams(ultrafixSteps, ultrafixDenoiseSteps)
         }
     }
 
@@ -877,9 +835,13 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     fun startUltrafix() {
         val bmp = currentBitmap ?: return
         val tileSize = maxOf(currentWidth, currentHeight)
+        val totalSteps = ultrafixSteps.roundToInt()
+        // Derive the strength that makes the backend run exactly the chosen
+        // number of denoise steps (clamped to the total).
+        val ultrafixDenoiseStrength = ultrafixDenoiseStrength(ultrafixDenoiseSteps, totalSteps)
         isUltrafixPreparing = true
         generationParamsTmp = GenerationParameters(
-            steps = steps.roundToInt(),
+            steps = totalSteps,
             cfg = cfg,
             seed = 0,
             prompt = promptField.text,
@@ -888,7 +850,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             width = bmp.width,
             height = bmp.height,
             runOnCpu = false,
-            denoiseStrength = denoiseStrength,
+            denoiseStrength = ultrafixDenoiseStrength,
             useOpenCL = false,
             scheduler = scheduler,
         )
@@ -907,14 +869,14 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
                     putExtra("prompt", promptField.text)
                     putExtra("negative_prompt", negativePromptField.text)
-                    putExtra("steps", steps.roundToInt())
+                    putExtra("steps", totalSteps)
                     putExtra("cfg", cfg)
                     seed.toLongOrNull()?.let { putExtra("seed", it) }
                     putExtra("width", bmp.width)
                     putExtra("height", bmp.height)
                     putExtra("effective_width", bmp.width)
                     putExtra("effective_height", bmp.height)
-                    putExtra("denoise_strength", denoiseStrength)
+                    putExtra("denoise_strength", ultrafixDenoiseStrength)
                     putExtra("scheduler", scheduler)
                     putExtra("ultrafix", true)
                     putExtra("ultrafix_tile_size", tileSize)
@@ -1116,7 +1078,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         generationStartTime = null
         Toast.makeText(
             context,
-            context.getString(R.string.generation_interrupted),
+            msgGenerationInterrupted,
             Toast.LENGTH_SHORT,
         ).show()
     }
@@ -2574,7 +2536,6 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
 
     // Ultrafix parameter confirmation.
     if (showUltrafixConfirmDialog) {
-        val randomSeedLabel = stringResource(R.string.ultrafix_seed_random)
         AlertDialog(
             onDismissRequest = { showUltrafixConfirmDialog = false },
             title = { Text(stringResource(R.string.ultrafix)) },
@@ -2586,17 +2547,75 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                     Text(stringResource(R.string.ultrafix_confirm_hint))
                     Text(
                         stringResource(
-                            R.string.ultrafix_params,
+                            R.string.ultrafix_source_info,
                             currentBitmap?.width ?: 0,
                             currentBitmap?.height ?: 0,
                             maxOf(currentWidth, currentHeight),
-                            steps.roundToInt(),
-                            String.format(Locale.US, "%.1f", cfg),
-                            String.format(Locale.US, "%.2f", denoiseStrength),
-                            schedulerDisplayName(scheduler),
-                            seed.ifBlank { randomSeedLabel },
                         ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    // Independent UltraFix steps (1..20). Lowering steps also
+                    // tightens the denoise-step cap below.
+                    val denoiseStepsMax =
+                        minOf(GenerationDefaults.ULTRAFIX_DENOISE_STEPS_MAX, ultrafixSteps.roundToInt())
+                    Text(
+                        stringResource(R.string.steps, ultrafixSteps.roundToInt()),
                         style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Slider(
+                        value = ultrafixSteps,
+                        onValueChange = {
+                            ultrafixSteps = it
+                            val newMax =
+                                minOf(GenerationDefaults.ULTRAFIX_DENOISE_STEPS_MAX, it.roundToInt())
+                            if (ultrafixDenoiseSteps > newMax) ultrafixDenoiseSteps = newMax
+                            saveUltrafixParams()
+                        },
+                        valueRange = GenerationDefaults.ULTRAFIX_STEPS_MIN..GenerationDefaults.ULTRAFIX_STEPS_MAX,
+                        steps = 18,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    // Independent UltraFix denoise steps (0..min(10, steps)):
+                    // how many of the total steps actually denoise.
+                    Text(
+                        stringResource(R.string.ultrafix_denoise_steps_label, ultrafixDenoiseSteps),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Slider(
+                        value = ultrafixDenoiseSteps.toFloat(),
+                        onValueChange = {
+                            ultrafixDenoiseSteps = it.roundToInt()
+                            saveUltrafixParams()
+                        },
+                        valueRange = 0f..denoiseStepsMax.toFloat(),
+                        steps = (denoiseStepsMax - 1).coerceAtLeast(0),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    TextButton(
+                        onClick = {
+                            ultrafixSteps = GenerationDefaults.GLOBAL.ultrafixSteps
+                            ultrafixDenoiseSteps = GenerationDefaults.GLOBAL.ultrafixDenoiseSteps
+                            saveUltrafixParams()
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.ultrafix_restore_defaults))
+                    }
+
+                    Text(
+                        stringResource(R.string.ultrafix_other_params_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     // The prompts are only a reminder of what will run; show a
                     // truncated preview instead of the full text.

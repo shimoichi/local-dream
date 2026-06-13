@@ -296,9 +296,12 @@
 
     <!-- UltraFix -->
     <string name="ultrafix">UltraFix</string>
-    <string name="ultrafix_confirm_hint">UltraFix 将使用以下参数对整张图片进行分块 img2img 修复。建议使用不超过0.5的去噪强度。处理耗时较长，请勿在设备过热时使用本功能。如需调整参数，请先在提示词页面修改。</string>
-    <string name="ultrafix_params">图像: %1$dx%2$d\n分块: %3$dpx\n步数: %4$d\nCFG: %5$s\n去噪强度: %6$s\n采样器: %7$s\n种子: %8$s</string>
+    <string name="ultrafix_confirm_hint">UltraFix 会用分块 img2img 对整张图片做精修。建议去噪强度不超过 0.5。处理耗时较长，请勿在设备过热时使用。</string>
     <string name="ultrafix_seed_random">随机</string>
+    <string name="ultrafix_denoise_steps_label">去噪步数: %d</string>
+    <string name="ultrafix_source_info">图像: %1$dx%2$d  ·  分块: %3$dpx</string>
+    <string name="ultrafix_restore_defaults">恢复默认值</string>
+    <string name="ultrafix_other_params_hint">提示词、CFG、采样器和种子取自提示词界面，请在那里修改。</string>
     <string name="ultrafix_preparing">正在准备 UltraFix…</string>
     <string name="ultrafix_failed">UltraFix 失败: %s</string>
     <string name="download_model_first">请先下载模型</string>
