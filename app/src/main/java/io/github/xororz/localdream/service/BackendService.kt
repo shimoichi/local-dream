@@ -251,6 +251,13 @@ class BackendService : Service() {
 
     private fun startBackend(modelId: String, backendType: String, width: Int, height: Int): Boolean {
         Log.i(TAG, "backend start, model: $modelId, resolution: $width×$height")
+
+        // Defensive: if a previous process is still tracked (e.g. the Service
+        // instance was reused for a fresh start without going through
+        // ACTION_RESTART), tear it down first so its reference is never
+        // overwritten and leaked. Done before publishing Starting so the
+        // transient Idle from stopBackend doesn't clobber our state.
+        stopBackend()
         updateState(BackendState.Starting)
 
         try {

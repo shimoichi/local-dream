@@ -1039,8 +1039,15 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             currentBitmap = null
             generationParams = null
             BackgroundGenerationService.stop(context)
+            // Use an explicit STOP command instead of stopService(): when the
+            // backend was just started, its Service may not have reached
+            // onCreate yet, and stopService() on a not-yet-running Service is a
+            // no-op that would leak the native process. Routing through
+            // onStartCommand(ACTION_STOP) guarantees the stop is honored after
+            // the pending start, mirroring BackgroundGenerationService.stop().
             val backendServiceIntent = Intent(context, BackendService::class.java)
-            context.stopService(backendServiceIntent)
+                .setAction(BackendService.ACTION_STOP)
+            context.startForegroundService(backendServiceIntent)
             isRunning = false
             progress = 0f
             errorMessage = null
