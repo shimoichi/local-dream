@@ -299,6 +299,9 @@
 
     <!-- Upscaler -->
     <string name="select_upscaler_model">업스케일러 모델 선택</string>
+    <string name="upscale_scale_label">배율</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">모델은 항상 4×로 업스케일하며, 2×와 3×는 결과를 다른 용도로 축소할 뿐입니다.</string>
     <string name="upscaling_image">이미지 업스케일 중…</string>
     <string name="upscale_failed">업스케일에 실패했습니다: %s</string>
 

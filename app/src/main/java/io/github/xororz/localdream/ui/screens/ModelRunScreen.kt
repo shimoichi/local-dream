@@ -2682,7 +2682,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             upscalerRepository = upscalerRepository,
             upscalerPreferences = upscalerPreferences,
             onDismiss = { showUpscalerDialog = false },
-            onUpscalerConfirmed = { selectedUpscaler ->
+            onUpscalerConfirmed = { selectedUpscaler, selectedScale ->
                 showUpscalerDialog = false
 
                 // Execute upscale
@@ -2699,6 +2699,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                                 context = context,
                                 bitmap = bitmap,
                                 upscalerId = selectedUpscaler.id,
+                                targetScale = selectedScale,
                             )
 
                             // Save upscaled image via HistoryManager (DB + JPG file)

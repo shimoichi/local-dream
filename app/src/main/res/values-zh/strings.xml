@@ -299,6 +299,9 @@
 
     <!-- Upscaler -->
     <string name="select_upscaler_model">选择超分辨率模型</string>
+    <string name="upscale_scale_label">放大倍率</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">模型始终以 4× 放大,2× 和 3× 只是将结果缩放以用于其他用途。</string>
     <string name="upscaling_image">正在超分辨率处理…</string>
     <string name="upscale_failed">超分辨率失败: %s</string>
 

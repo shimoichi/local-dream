@@ -309,6 +309,9 @@
 
     <!-- Upscaler -->
     <string name="select_upscaler_model">Select Upscaler Model</string>
+    <string name="upscale_scale_label">Scale</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">The model always upscales at 4×; 2× and 3× simply resize that result for other uses.</string>
     <string name="upscaling_image">Upscaling image…</string>
     <string name="upscale_failed">Upscale failed: %s</string>
 

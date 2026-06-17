@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ import io.github.xororz.localdream.data.UpscalerModel
 import io.github.xororz.localdream.data.UpscalerRepository
 import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.SmoothLinearWavyProgressIndicator
+import io.github.xororz.localdream.utils.UPSCALER_NATIVE_SCALE
 
 /**
  * Upscaler picker with download handling. Tracks ModelDownloadService state for
@@ -58,7 +61,7 @@ fun UpscalerPickerFlow(
     upscalerRepository: UpscalerRepository,
     upscalerPreferences: SharedPreferences,
     onDismiss: () -> Unit,
-    onUpscalerConfirmed: (UpscalerModel) -> Unit,
+    onUpscalerConfirmed: (UpscalerModel, Int) -> Unit,
 ) {
     val context = LocalContext.current
     val msgDownloadDone = stringResource(R.string.download_done)
@@ -68,6 +71,11 @@ fun UpscalerPickerFlow(
     LaunchedEffect(Unit) { upscalerRepository.ensureLoaded() }
     var tempSelectedUpscalerId by remember {
         mutableStateOf(upscalerPreferences.getString("${modelId}_selected_upscaler", null))
+    }
+    var tempSelectedScale by remember {
+        mutableStateOf(
+            upscalerPreferences.getInt("${modelId}_upscale_scale", UPSCALER_NATIVE_SCALE),
+        )
     }
     var downloadingUpscalerId by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableStateOf<DownloadProgress?>(null) }
@@ -130,11 +138,15 @@ fun UpscalerPickerFlow(
     UpscalerSelectDialog(
         upscalers = upscalerRepository.upscalers,
         selectedUpscalerId = tempSelectedUpscalerId,
+        selectedScale = tempSelectedScale,
         downloadingUpscalerId = downloadingUpscalerId,
         downloadProgress = downloadProgress,
         onDismiss = onDismiss,
         onSelectUpscaler = { upscalerId ->
             tempSelectedUpscalerId = upscalerId
+        },
+        onSelectScale = { scale ->
+            tempSelectedScale = scale
         },
         onConfirm = {
             val selectedUpscaler =
@@ -142,8 +154,9 @@ fun UpscalerPickerFlow(
             if (selectedUpscaler != null && selectedUpscaler.isDownloaded) {
                 upscalerPreferences.edit {
                     putString("${modelId}_selected_upscaler", selectedUpscaler.id)
+                    putInt("${modelId}_upscale_scale", tempSelectedScale)
                 }
-                onUpscalerConfirmed(selectedUpscaler)
+                onUpscalerConfirmed(selectedUpscaler, tempSelectedScale)
             } else if (selectedUpscaler != null) {
                 Toast.makeText(
                     context,
@@ -164,10 +177,12 @@ fun UpscalerPickerFlow(
 fun UpscalerSelectDialog(
     upscalers: List<UpscalerModel>,
     selectedUpscalerId: String?,
+    selectedScale: Int,
     downloadingUpscalerId: String?,
     downloadProgress: DownloadProgress?,
     onDismiss: () -> Unit,
     onSelectUpscaler: (String) -> Unit,
+    onSelectScale: (Int) -> Unit,
     onConfirm: () -> Unit,
     onDownload: (UpscalerModel) -> Unit,
 ) {
@@ -188,6 +203,12 @@ fun UpscalerSelectDialog(
                         onDownload = { onDownload(upscaler) },
                     )
                 }
+                item {
+                    UpscaleScaleSelector(
+                        selectedScale = selectedScale,
+                        onSelectScale = onSelectScale,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -204,6 +225,59 @@ fun UpscalerSelectDialog(
             }
         },
     )
+}
+
+// Selectable upscale ratios. The model runs natively at UPSCALER_NATIVE_SCALE;
+// smaller ratios are produced by downscaling its result.
+private val upscaleScaleOptions = listOf(2, 3, UPSCALER_NATIVE_SCALE)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun UpscaleScaleSelector(
+    selectedScale: Int,
+    onSelectScale: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.upscale_scale_label),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(
+                ButtonGroupDefaults.ConnectedSpaceBetween,
+            ),
+        ) {
+            upscaleScaleOptions.forEachIndexed { index, scale ->
+                val shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+
+                    upscaleScaleOptions.lastIndex ->
+                        ButtonGroupDefaults.connectedTrailingButtonShapes()
+
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                }
+                ToggleButton(
+                    checked = selectedScale == scale,
+                    onCheckedChange = { checked -> if (checked) onSelectScale(scale) },
+                    shapes = shapes,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.upscale_factor, scale))
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.upscale_scale_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

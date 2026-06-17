@@ -51,6 +51,7 @@ import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.SmoothCircularWavyProgressIndicator
 import io.github.xororz.localdream.ui.theme.Motion
+import io.github.xororz.localdream.utils.UPSCALER_NATIVE_SCALE
 import io.github.xororz.localdream.utils.performUpscale
 import io.github.xororz.localdream.utils.saveImage
 import java.io.File
@@ -623,6 +624,11 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
         var tempSelectedUpscalerId by remember {
             mutableStateOf(upscalerPreferences.getString("${modelId}_selected_upscaler", null))
         }
+        var tempSelectedScale by remember {
+            mutableStateOf(
+                upscalerPreferences.getInt("${modelId}_upscale_scale", UPSCALER_NATIVE_SCALE),
+            )
+        }
         var downloadingUpscalerId by remember { mutableStateOf<String?>(null) }
         var downloadProgress by remember { mutableStateOf<DownloadProgress?>(null) }
 
@@ -684,11 +690,15 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
         UpscalerSelectDialog(
             upscalers = upscalerRepository.upscalers,
             selectedUpscalerId = tempSelectedUpscalerId,
+            selectedScale = tempSelectedScale,
             downloadingUpscalerId = downloadingUpscalerId,
             downloadProgress = downloadProgress,
             onDismiss = { showUpscalerDialog = false },
             onSelectUpscaler = { upscalerId ->
                 tempSelectedUpscalerId = upscalerId
+            },
+            onSelectScale = { scale ->
+                tempSelectedScale = scale
             },
             onConfirm = {
                 val selectedUpscaler =
@@ -696,9 +706,11 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                 if (selectedUpscaler != null && selectedUpscaler.isDownloaded) {
                     upscalerPreferences.edit {
                         putString("${modelId}_selected_upscaler", selectedUpscaler.id)
+                        putInt("${modelId}_upscale_scale", tempSelectedScale)
                     }
                     showUpscalerDialog = false
 
+                    val targetScale = tempSelectedScale
                     selectedBitmap?.let { bitmap ->
                         tileProgress = null
                         currentLog = ""
@@ -709,6 +721,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                                     context = context,
                                     bitmap = bitmap,
                                     upscalerId = selectedUpscaler.id,
+                                    targetScale = targetScale,
                                 )
                                 upscaledBitmap = resultBitmap
 

@@ -53,7 +53,23 @@ private fun nextSaveFilename(extension: String): String {
     return "generated_image_${ts}_$seq.$extension"
 }
 
-suspend fun performUpscale(context: Context, bitmap: Bitmap, upscalerId: String): Bitmap = withContext(Dispatchers.IO) {
+// The upscaler models are fixed 4x; smaller target scales are produced by
+// downscaling the native result on the client.
+const val UPSCALER_NATIVE_SCALE = 4
+
+/**
+ * Upscales [bitmap] with the model identified by [upscalerId].
+ *
+ * The backend always emits a [UPSCALER_NATIVE_SCALE]x result. When [targetScale]
+ * is smaller, the result is downscaled to [targetScale]x of the source on the
+ * client, since the model itself only runs at its native ratio.
+ */
+suspend fun performUpscale(
+    context: Context,
+    bitmap: Bitmap,
+    upscalerId: String,
+    targetScale: Int = UPSCALER_NATIVE_SCALE,
+): Bitmap = withContext(Dispatchers.IO) {
     val totalStartTime = System.currentTimeMillis()
 
     // Get upscaler model path
@@ -128,6 +144,27 @@ suspend fun performUpscale(context: Context, bitmap: Bitmap, upscalerId: String)
             "Client total time: ${System.currentTimeMillis() - totalStartTime}ms",
         )
         Log.d("UpscaleBinary", "Output size: ${resultWidth}x$resultHeight")
+
+        // The model only runs at its native ratio; emulate a smaller scale by
+        // downscaling the native result to targetScale x the source dimensions.
+        val clampedScale = targetScale.coerceIn(1, UPSCALER_NATIVE_SCALE)
+        if (clampedScale != UPSCALER_NATIVE_SCALE) {
+            val targetWidth = width * clampedScale
+            val targetHeight = height * clampedScale
+            if (resultBitmap.width != targetWidth || resultBitmap.height != targetHeight) {
+                val scaled = Bitmap.createScaledBitmap(
+                    resultBitmap,
+                    targetWidth,
+                    targetHeight,
+                    true,
+                )
+                if (scaled != resultBitmap) {
+                    resultBitmap.recycle()
+                }
+                Log.d("UpscaleBinary", "Resized to ${targetWidth}x$targetHeight (${clampedScale}x)")
+                return@withContext scaled
+            }
+        }
 
         resultBitmap
     }

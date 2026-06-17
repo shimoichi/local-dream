@@ -299,6 +299,9 @@
 
     <!-- Upscaler -->
     <string name="select_upscaler_model">アップスケーラーモデルを選択</string>
+    <string name="upscale_scale_label">拡大倍率</string>
+    <string name="upscale_factor">%d×</string>
+    <string name="upscale_scale_hint">モデルは常に4×で拡大します。2×と3×は結果を縮小するだけで、他の用途向けです。</string>
     <string name="upscaling_image">画像のアップスケール中…</string>
     <string name="upscale_failed">アップスケールに失敗しました: %s</string>
 
