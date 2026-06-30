@@ -319,6 +319,7 @@
     <string name="ultrafix_other_params_hint">프롬프트, CFG, 스케줄러, 시드는 프롬프트 화면의 값을 사용합니다. 거기서 수정하세요.</string>
     <string name="ultrafix_preparing">UltraFix 준비 중…</string>
     <string name="ultrafix_failed">UltraFix에 실패했습니다: %s</string>
+    <string name="ultrafix_quality_denoise_desc">다음 프롬프트로 디노이즈합니다: %s. 끄면 입력란의 프롬프트를 사용합니다.</string>
     <string name="download_model_first">먼저 모델을 다운로드하세요</string>
     <string name="upscaler_anime">애니풍</string>
     <string name="upscaler_anime_desc">애니풍 및 만화 이미지에 최적화되어 있습니다</string>

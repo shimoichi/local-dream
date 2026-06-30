@@ -88,6 +88,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -482,6 +483,11 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
     var ultrafixDenoiseSteps by remember {
         mutableIntStateOf(GenerationDefaults.GLOBAL.ultrafixDenoiseSteps)
     }
+    // On (default): UltraFix runs on neutral quality tags instead of the
+    // prompt-page prompt. Off: uses the prompt-page prompt (legacy behavior).
+    var ultrafixQualityDenoise by remember {
+        mutableStateOf(GenerationDefaults.GLOBAL.ultrafixQualityDenoise)
+    }
     var ultrafixSaveJob: Job? by remember { mutableStateOf(null) }
     LaunchedEffect(Unit) {
         ultrafixSteps = generationPreferences.observeUltrafixSteps(modelId).first()
@@ -489,6 +495,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
             minOf(GenerationDefaults.ULTRAFIX_DENOISE_STEPS_MAX, ultrafixSteps.roundToInt())
         ultrafixDenoiseSteps =
             generationPreferences.observeUltrafixDenoiseSteps(modelId).first().coerceIn(0, maxDenoiseSteps)
+        ultrafixQualityDenoise = generationPreferences.observeUltrafixQualityDenoise(modelId).first()
     }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
     val upscalerPreferences =
@@ -541,7 +548,12 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         ultrafixSaveJob?.cancel()
         ultrafixSaveJob = scope.launch(Dispatchers.IO) {
             delay(500)
-            generationPreferences.saveUltrafixParams(modelId, ultrafixSteps, ultrafixDenoiseSteps)
+            generationPreferences.saveUltrafixParams(
+                modelId,
+                ultrafixSteps,
+                ultrafixDenoiseSteps,
+                ultrafixQualityDenoise,
+            )
         }
     }
 
@@ -839,12 +851,18 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
         // Derive the strength that makes the backend run exactly the chosen
         // number of denoise steps (clamped to the total).
         val ultrafixDenoiseStrength = ultrafixDenoiseStrength(ultrafixDenoiseSteps, totalSteps)
+        // When quality-denoise is on (default), UltraFix runs on neutral quality
+        // tags instead of the prompt-page prompt; off uses the box prompt.
+        val ultrafixPrompt =
+            if (ultrafixQualityDenoise) GenerationDefaults.ULTRAFIX_QUALITY_PROMPT else promptField.text
         isUltrafixPreparing = true
         generationParamsTmp = GenerationParameters(
             steps = totalSteps,
             cfg = cfg,
             seed = 0,
-            prompt = promptField.text,
+            // Record the prompt UltraFix actually ran with (quality tags when
+            // the toggle is on), so history reflects what produced the result.
+            prompt = ultrafixPrompt,
             negativePrompt = negativePromptField.text,
             generationTime = "",
             width = bmp.width,
@@ -867,7 +885,7 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                 }
                 pendingUltrafix = true
                 val intent = Intent(context, BackgroundGenerationService::class.java).apply {
-                    putExtra("prompt", promptField.text)
+                    putExtra("prompt", ultrafixPrompt)
                     putExtra("negative_prompt", negativePromptField.text)
                     putExtra("steps", totalSteps)
                     putExtra("cfg", cfg)
@@ -2610,10 +2628,35 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                         modifier = Modifier.fillMaxWidth(),
                     )
 
+                    // Quality-denoise toggle: run UltraFix on neutral quality
+                    // tags instead of the prompt-page prompt. On by default.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.ultrafix_quality_denoise_desc,
+                                GenerationDefaults.ULTRAFIX_QUALITY_PROMPT,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = ultrafixQualityDenoise,
+                            onCheckedChange = {
+                                ultrafixQualityDenoise = it
+                                saveUltrafixParams()
+                            },
+                        )
+                    }
+
                     TextButton(
                         onClick = {
                             ultrafixSteps = GenerationDefaults.GLOBAL.ultrafixSteps
                             ultrafixDenoiseSteps = GenerationDefaults.GLOBAL.ultrafixDenoiseSteps
+                            ultrafixQualityDenoise = GenerationDefaults.GLOBAL.ultrafixQualityDenoise
                             saveUltrafixParams()
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -2633,15 +2676,23 @@ fun ModelRunScreen(modelId: String, navController: NavController, modifier: Modi
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     // The prompts are only a reminder of what will run; show a
-                    // truncated preview instead of the full text.
+                    // truncated preview instead of the full text. With the
+                    // toggle on, UltraFix runs on the quality tags, so preview
+                    // those instead of the prompt-page text.
                     fun preview(text: String) = if (text.length > 80) text.take(80) + "..." else text
-                    if (promptField.text.isNotBlank()) {
+                    val ultrafixPreviewPrompt =
+                        if (ultrafixQualityDenoise) {
+                            GenerationDefaults.ULTRAFIX_QUALITY_PROMPT
+                        } else {
+                            promptField.text
+                        }
+                    if (ultrafixPreviewPrompt.isNotBlank()) {
                         Text(
                             stringResource(R.string.image_prompt),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            preview(promptField.text),
+                            preview(ultrafixPreviewPrompt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

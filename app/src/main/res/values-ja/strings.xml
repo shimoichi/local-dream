@@ -319,6 +319,7 @@
     <string name="ultrafix_other_params_hint">プロンプト・CFG・スケジューラ・シードはプロンプト画面の値を使用します。変更はそちらで行ってください。</string>
     <string name="ultrafix_preparing">UltraFixを準備中…</string>
     <string name="ultrafix_failed">UltraFixに失敗しました: %s</string>
+    <string name="ultrafix_quality_denoise_desc">次のプロンプトでデノイズします：%s。オフにすると入力欄のプロンプトを使用します。</string>
     <string name="download_model_first">まずモデルをダウンロードしてください</string>
     <string name="upscaler_anime">アニメ風</string>
     <string name="upscaler_anime_desc">アニメや漫画の画像に最適化</string>

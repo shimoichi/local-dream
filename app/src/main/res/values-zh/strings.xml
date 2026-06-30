@@ -319,6 +319,7 @@
     <string name="ultrafix_other_params_hint">提示词、CFG、采样器和种子取自提示词界面，请在那里修改。</string>
     <string name="ultrafix_preparing">正在准备 UltraFix…</string>
     <string name="ultrafix_failed">UltraFix 失败: %s</string>
+    <string name="ultrafix_quality_denoise_desc">使用以下提示词去噪：%s。关闭后将使用输入框的提示词。</string>
     <string name="download_model_first">请先下载模型</string>
     <string name="upscaler_anime">动漫</string>
     <string name="upscaler_anime_desc">针对动漫和卡通图像优化</string>

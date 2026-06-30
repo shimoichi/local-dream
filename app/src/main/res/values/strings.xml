@@ -329,6 +329,7 @@
     <string name="ultrafix_other_params_hint">Prompt, CFG, scheduler and seed are taken from the prompt page — edit them there.</string>
     <string name="ultrafix_preparing">Preparing UltraFix…</string>
     <string name="ultrafix_failed">UltraFix failed: %s</string>
+    <string name="ultrafix_quality_denoise_desc">Denoise with the following prompt: %s. Turn off to use your prompt-page prompt instead.</string>
     <string name="download_model_first">Please download the model first</string>
     <string name="upscaler_anime">Anime</string>
     <string name="upscaler_anime_desc">Optimized for anime and cartoon images</string>
