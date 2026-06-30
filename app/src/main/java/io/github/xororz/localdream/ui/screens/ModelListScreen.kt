@@ -1038,7 +1038,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                         }
                     }
 
-                    if (page == 1 && Model.isQualcommDevice()) {
+                    if (page == 1) {
                         item {
                             AddCustomNpuModelButton(
                                 onClick = { showCustomNpuModelDialog = true },
@@ -1062,7 +1062,7 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                             isSelectionMode = isSelectionMode,
                             isPinned = model.id in pinnedIds,
                             onClick = {
-                                if (!Model.isDeviceSupported() && !model.runOnCpu) {
+                                if (!Model.isDeviceSupported() && !model.runOnCpu && !model.isCustom) {
                                     scope.launch {
                                         snackbarHostState.showSnackbar(msgUnsupportNpu)
                                     }
@@ -3019,13 +3019,6 @@ suspend fun extractNpuModel(
         withContext(Dispatchers.Main) {
             onStart()
             onProgress(context.getString(R.string.preparing_npu_model))
-        }
-
-        if (!Model.isQualcommDevice()) {
-            withContext(Dispatchers.Main) {
-                onError(context.getString(R.string.only_qualcomm_npu))
-            }
-            return@withContext
         }
 
         val modelId = modelName.replace(" ", "")
