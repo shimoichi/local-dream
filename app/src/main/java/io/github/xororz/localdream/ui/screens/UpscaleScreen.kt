@@ -47,6 +47,7 @@ import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.DownloadProgress
 import io.github.xororz.localdream.data.UpscalerRepository
+import io.github.xororz.localdream.navigation.popBackStackIfResumed
 import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.SmoothCircularWavyProgressIndicator
@@ -57,6 +58,7 @@ import io.github.xororz.localdream.utils.saveImage
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -219,11 +221,12 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                     environment().putAll(env)
                 }
 
-                backendProcess = processBuilder.start()
+                val proc = processBuilder.start()
+                backendProcess = proc
 
                 Thread {
                     try {
-                        backendProcess?.inputStream?.bufferedReader()?.use { reader ->
+                        proc.inputStream.bufferedReader().use { reader ->
                             var line: String?
                             while (reader.readLine().also { line = it } != null) {
                                 val logLine = line!!
@@ -243,8 +246,11 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                                 }
                             }
                         }
-                        val exitCode = backendProcess?.waitFor()
+                        val exitCode = proc.waitFor()
                         Log.i("UpscaleBackend", "Backend process exited with code: $exitCode")
+                    } catch (e: InterruptedIOException) {
+                        // Expected when stopUpscalerBackend() destroys the process.
+                        Log.i("UpscaleBackend", "Monitor stopped: ${e.message}")
                     } catch (e: Exception) {
                         Log.e("UpscaleBackend", "Monitor error", e)
                     }
@@ -262,7 +268,10 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
     }
 
     fun stopUpscalerBackend() {
-        backendProcess?.let { proc ->
+        val proc = backendProcess ?: return
+        backendProcess = null
+        // Called from onDispose on the main thread; waitFor must not block it.
+        Thread {
             try {
                 proc.destroy()
                 if (!proc.waitFor(5, TimeUnit.SECONDS)) {
@@ -271,9 +280,10 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                 Log.i("UpscaleScreen", "Backend stopped")
             } catch (e: Exception) {
                 Log.e("UpscaleScreen", "Failed to stop backend", e)
-            } finally {
-                backendProcess = null
             }
+        }.apply {
+            isDaemon = true
+            start()
         }
     }
 
@@ -305,7 +315,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
             TopAppBar(
                 title = { Text(stringResource(R.string.image_upscale)) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStackIfResumed() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back),
