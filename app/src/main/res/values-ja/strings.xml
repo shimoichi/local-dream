@@ -441,4 +441,32 @@
     <string name="clean_temp_confirm">一時ファイル（中断したダウンロードや一時バッファ）%s を削除しますか？</string>
     <string name="clean_temp_none">削除する一時ファイルはありません</string>
     <string name="clean_temp_done">%s を解放しました</string>
+
+    <!-- Device link (remote control between two devices) -->
+    <string name="remote_link">デバイス連携</string>
+    <string name="remote_host_section">ホストモード（この端末でモデルを実行）</string>
+    <string name="remote_host_hint">同じネットワーク上の Local Dream を搭載した別の端末が、この端末のモデルを参照して画像を生成できるようにします。ホストモード中は、制御ポート（8808）と生成ポート（8081）がローカルネットワークに開放されます。</string>
+    <string name="remote_host_start">ホストモードを開始</string>
+    <string name="remote_host_stop">ホストモードを終了</string>
+    <string name="remote_host_addresses">この端末のアドレス</string>
+    <string name="remote_no_network">ネットワークアドレスが見つかりません。先に Wi-Fi に接続してください。</string>
+    <string name="remote_host_serving">実行中のモデル：%1$s</string>
+    <string name="remote_host_no_model">モデル未ロード</string>
+    <string name="remote_connect_section">ホストに接続（この端末をリモコンとして使用）</string>
+    <string name="remote_connect_hint">ホスト端末に表示されるアドレスを入力してください。接続後、モデル一覧にはホストのモデルが表示され、生成はホスト上で行われます。</string>
+    <string name="remote_host_field">ホストアドレス</string>
+    <string name="remote_connect">接続</string>
+    <string name="remote_disconnect">切断</string>
+    <string name="remote_refresh_models">モデル一覧を更新</string>
+    <string name="remote_refresh_models_short">更新</string>
+    <string name="remote_connect_failed_unreachable">ホストに接続できません。アドレスを確認し、ホストモードが有効か確認してください。</string>
+    <string name="remote_connected_to">%1$s に接続しました</string>
+    <string name="remote_banner_connected">%1$s のモデル</string>
+    <string name="remote_banner_offline">ホストに到達できません</string>
+    <string name="remote_select_failed">ホストでのモデル起動に失敗しました</string>
+    <string name="remote_port_hint">既定の制御ポート：%1$d。アドレス:ポート の形式で変更できます。</string>
+    <string name="remote_host_notify_title">ホストモード実行中</string>
+    <string name="remote_host_notify">Local Dream はローカルネットワークから操作できます</string>
+    <string name="remote_screen_shield">黒画面（動作を維持）</string>
+    <string name="remote_screen_shield_exit">タップで戻る</string>
 </resources>

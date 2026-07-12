@@ -46,8 +46,11 @@ import coil.request.ImageRequest
 import io.github.xororz.localdream.BuildConfig
 import io.github.xororz.localdream.R
 import io.github.xororz.localdream.data.DownloadProgress
+import io.github.xororz.localdream.data.RemoteRepository
 import io.github.xororz.localdream.data.UpscalerRepository
 import io.github.xororz.localdream.navigation.popBackStackIfResumed
+import io.github.xororz.localdream.remote.RemoteProtocol
+import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.ModelDownloadService
 import io.github.xororz.localdream.ui.components.BlockingProgressOverlay
 import io.github.xororz.localdream.ui.components.SmoothCircularWavyProgressIndicator
@@ -61,6 +64,7 @@ import java.io.IOException
 import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -89,7 +93,23 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
 
     var showUpscalerDialog by remember { mutableStateOf(false) }
     val upscalerRepository = remember { UpscalerRepository.getInstance(context) }
-    LaunchedEffect(Unit) { upscalerRepository.ensureLoaded() }
+    val remoteRepository = remember { RemoteRepository.getInstance(context) }
+    // Connected-device mode snapshot at entry: the host runs its native
+    // backend in upscaler mode and does the actual work; this device never
+    // spawns a local process. restore() first so a process-recreated entry
+    // doesn't misread a saved connection as local mode.
+    val isRemote = remember {
+        remoteRepository.restore()
+        remoteRepository.isActive
+    }
+    val remoteClient = remember { if (isRemote) remoteRepository.client() else null }
+    val backendHost = remoteClient?.generationHost
+        ?: BackgroundGenerationService.LOCAL_BACKEND_HOST
+    val availableUpscalers =
+        if (isRemote) remoteRepository.remoteUpscalers() else upscalerRepository.upscalers
+    LaunchedEffect(Unit) {
+        if (!isRemote) upscalerRepository.ensureLoaded()
+    }
     val upscalerPreferences =
         remember { context.getSharedPreferences("upscaler_prefs", Context.MODE_PRIVATE) }
 
@@ -301,12 +321,34 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                 Log.e("UpscaleScreen", "Failed to clean temp files", e)
             }
         }
-        startUpscalerBackend()
+        if (isRemote) {
+            // Process recreation lands here before the list screen's catalog
+            // refresh; without it the upscaler list (and paths) stay empty.
+            if (remoteRepository.upscalerPaths.isEmpty()) {
+                remoteRepository.refresh()
+            }
+            remoteClient?.let { client ->
+                client.selectModel(RemoteProtocol.UPSCALER_MODEL_ID, 512, 512)
+                // Wait until the host's upscaler process answers /health so an
+                // immediate upscale doesn't hit a connection refused. Bounded;
+                // on timeout the upscale itself will surface the error.
+                repeat(30) {
+                    if (client.checkGenerationHealth()) return@let
+                    delay(1000)
+                }
+            }
+        } else {
+            startUpscalerBackend()
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            stopUpscalerBackend()
+            if (isRemote) {
+                remoteRepository.stopHostBackendAsync(RemoteProtocol.UPSCALER_MODEL_ID)
+            } else {
+                stopUpscalerBackend()
+            }
         }
     }
 
@@ -698,7 +740,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
         }
 
         UpscalerSelectDialog(
-            upscalers = upscalerRepository.upscalers,
+            upscalers = availableUpscalers,
             selectedUpscalerId = tempSelectedUpscalerId,
             selectedScale = tempSelectedScale,
             downloadingUpscalerId = downloadingUpscalerId,
@@ -712,7 +754,7 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
             },
             onConfirm = {
                 val selectedUpscaler =
-                    upscalerRepository.upscalers.find { it.id == tempSelectedUpscalerId }
+                    availableUpscalers.find { it.id == tempSelectedUpscalerId }
                 if (selectedUpscaler != null && selectedUpscaler.isDownloaded) {
                     upscalerPreferences.edit {
                         putString("${modelId}_selected_upscaler", selectedUpscaler.id)
@@ -732,6 +774,12 @@ fun UpscaleScreen(navController: NavController, modifier: Modifier = Modifier) {
                                     bitmap = bitmap,
                                     upscalerId = selectedUpscaler.id,
                                     targetScale = targetScale,
+                                    backendHost = backendHost,
+                                    remoteUpscalerPath = if (isRemote) {
+                                        remoteRepository.upscalerPaths[selectedUpscaler.id]
+                                    } else {
+                                        null
+                                    },
                                 )
                                 upscaledBitmap = resultBitmap
 
