@@ -469,4 +469,10 @@
     <string name="remote_host_notify">Local Dream을 로컬 네트워크에서 제어할 수 있습니다</string>
     <string name="remote_screen_shield">검은 화면(계속 실행)</string>
     <string name="remote_screen_shield_exit">탭하여 종료</string>
+    <string name="ultrafix_import_action">로컬 이미지 가져오기</string>
+    <string name="ultrafix_import_title">UltraFix용 이미지 가져오기</string>
+    <string name="ultrafix_import_requirement">긴 변 최대 %1$d. UltraFix에는 긴 변 1024 초과, 짧은 변 %2$d 이상이 필요합니다. 작은 이미지는 가져온 후 업스케일할 수 있습니다.</string>
+    <string name="ultrafix_import_output">출력 크기: %1$d×%2$d</string>
+    <string name="ultrafix_import_scale">배율: %1$d%%</string>
+    <string name="ultrafix_longpress_hint">팁: 업스케일 또는 UltraFix 버튼을 길게 누르면 로컬 이미지를 가져올 수 있습니다.</string>
 </resources>

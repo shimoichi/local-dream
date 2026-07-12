@@ -479,4 +479,10 @@
     <string name="remote_host_notify">Local Dream can be controlled from your local network</string>
     <string name="remote_screen_shield">Black screen (stay awake)</string>
     <string name="remote_screen_shield_exit">Tap to exit</string>
+    <string name="ultrafix_import_action">Import local image</string>
+    <string name="ultrafix_import_title">Import image for UltraFix</string>
+    <string name="ultrafix_import_requirement">Long side up to %1$d. UltraFix needs the long side above 1024 and the short side at least %2$d; smaller imports can be upscaled first.</string>
+    <string name="ultrafix_import_output">Output size: %1$d×%2$d</string>
+    <string name="ultrafix_import_scale">Scale: %1$d%%</string>
+    <string name="ultrafix_longpress_hint">Tip: long-press the upscale or UltraFix button to import a local image.</string>
 </resources>

@@ -469,4 +469,10 @@
     <string name="remote_host_notify">Local Dream 可被局域网内设备控制</string>
     <string name="remote_screen_shield">纯黑屏幕（保持运行）</string>
     <string name="remote_screen_shield_exit">轻触退出</string>
+    <string name="ultrafix_import_action">导入本机图片</string>
+    <string name="ultrafix_import_title">导入图片进行 UltraFix</string>
+    <string name="ultrafix_import_requirement">长边最大 %1$d。UltraFix 需要长边大于 1024 且短边不小于 %2$d；较小的图片导入后可先超分。</string>
+    <string name="ultrafix_import_output">输出尺寸：%1$d×%2$d</string>
+    <string name="ultrafix_import_scale">缩放：%1$d%%</string>
+    <string name="ultrafix_longpress_hint">提示：长按超分或 UltraFix 按钮可导入本机图片。</string>
 </resources>
